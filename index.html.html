@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>프로젝트 AI 태스크 관리</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+// ============================================================
+// 🔒 비밀번호 설정 (배포 전 반드시 변경하세요!)
+const APP_PASSWORD = "iscream2024";
+// ============================================================
+
+const STATUS = { todo: "할 일", doing: "진행 중", done: "완료" };
+const PRIORITY = { high: "높음", mid: "중간", low: "낮음" };
+const PC = { high: "#ef4444", mid: "#f59e0b", low: "#22c55e" };
+const SC = { todo: "#6b7280", doing: "#3b82f6", done: "#10b981" };
+
+const initProjects = [
+  {
+    id: 1, name: "[창의재단] 기업연계 정보교원 역량강화", tag: "공동수급", color: "#6366f1",
+    tasks: [
+      { id: 1, title: "협력사 수정 사업계획서 및 과업협상서 취합", status: "done", priority: "high", due: "2025-05-21", assignee: "교육컨설팅팀" },
+      { id: 2, title: "최종 검토 후 창의재단 전달", status: "done", priority: "high", due: "2025-05-22", assignee: "교육컨설팅팀" },
+      { id: 3, title: "주관사 협약", status: "doing", priority: "high", due: "2025-06-01", assignee: "교육컨설팅팀" },
+      { id: 4, title: "창의재단 김종범 연구원님께 사업계획서 및 과업협상서 전달", status: "todo", priority: "high", due: "2025-06-04", assignee: "교육컨설팅팀" },
+      { id: 5, title: "연수 심의 자료 공문 제출", status: "todo", priority: "mid", due: "2025-06-10", assignee: "교육컨설팅팀" },
+      { id: 6, title: "사전모집 설문 홍보", status: "done", priority: "mid", due: "2025-05-19", assignee: "교육컨설팅팀" },
+    ],
+  },
+  {
+    id: 2, name: "[KERIS] 중등 AI 교육 담당교원 역량강화", tag: "단독", color: "#0ea5e9",
+    tasks: [
+      { id: 1, title: "운영 페이지 구성", status: "doing", priority: "mid", due: "", assignee: "" },
+      { id: 2, title: "연수 일정(안) 수립 - 단기인력", status: "todo", priority: "mid", due: "", assignee: "" },
+    ],
+  },
+  {
+    id: 3, name: "[화성오산] AI 디지털 기반 블렌디드 연수", tag: "수의계약", color: "#f59e0b",
+    tasks: [
+      { id: 1, title: "보조강사 선발 및 확정", status: "done", priority: "high", due: "2025-04-30", assignee: "권다솜/서혜빈" },
+      { id: 2, title: "집필 파트 배분 (1차 회의)", status: "done", priority: "high", due: "2025-04-30", assignee: "권다솜/서혜빈" },
+      { id: 3, title: "1차 초안 작성 (수업설계안 및 교안)", status: "done", priority: "high", due: "2025-05-07", assignee: "권다솜/서혜빈" },
+      { id: 4, title: "과정 검토 (2차 회의)", status: "done", priority: "high", due: "2025-05-09", assignee: "전체" },
+      { id: 5, title: "최종 보완 및 제출", status: "done", priority: "high", due: "2025-05-11", assignee: "권다솜/서혜빈" },
+      { id: 6, title: "집합 연수 운영", status: "todo", priority: "high", due: "2025-06-27", assignee: "윤양호" },
+    ],
+  },
+  {
+    id: 4, name: "[인천교육청] 디지털 기반 교육혁신 교원역량강화", tag: "단독", color: "#10b981",
+    tasks: [
+      { id: 1, title: "1차 초안 작성", status: "done", priority: "high", due: "2026-05-06", assignee: "" },
+      { id: 2, title: "제안서 제출", status: "done", priority: "high", due: "2026-05-08", assignee: "" },
+      { id: 3, title: "평가 대응", status: "done", priority: "high", due: "2026-05-20", assignee: "" },
+    ],
+  },
+  {
+    id: 5, name: "[경기도교육청미래과학교육원] AI·디지털 기반 교육혁신", tag: "공동수급", color: "#ec4899",
+    tasks: [
+      { id: 1, title: "사전규격 의견 검토 및 답변 대응", status: "done", priority: "high", due: "", assignee: "" },
+      { id: 2, title: "공동수급체(분담이행방식) 구성 준비", status: "doing", priority: "high", due: "", assignee: "" },
+      { id: 3, title: "입찰 참여 준비", status: "todo", priority: "mid", due: "", assignee: "" },
+    ],
+  },
+];
+
+let taskIdCounter = 100;
+
+/* ── 비밀번호 게이트 ── */
+function PasswordGate({ onAuth }) {
+  const [pw, setPw] = useState(""), [err, setErr] = useState(false);
+  const submit = () => {
+    if (pw === APP_PASSWORD) { sessionStorage.setItem("auth", "1"); onAuth(); }
+    else { setErr(true); setPw(""); }
+  };
+  return (
+    <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#1e1e2e,#2d2d3f)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ background:"#fff", borderRadius:16, padding:40, width:360, boxShadow:"0 20px 60px rgba(0,0,0,.3)" }}>
+        <div style={{ textAlign:"center", marginBottom:28 }}>
+          <div style={{ fontSize:36, marginBottom:8 }}>🔒</div>
+          <div style={{ fontWeight:800, fontSize:18, color:"#1e293b" }}>팀 전용 접근</div>
+          <div style={{ color:"#94a3b8", fontSize:13, marginTop:4 }}>비밀번호를 입력하세요</div>
+        </div>
+        <input type="password" value={pw} onChange={e => { setPw(e.target.value); setErr(false); }}
+          onKeyDown={e => e.key==="Enter" && submit()} placeholder="비밀번호" autoFocus
+          style={{ width:"100%", padding:"11px 14px", borderRadius:8, border: err?"2px solid #ef4444":"1px solid #e2e8f0", fontSize:14, outline:"none", marginBottom:8 }} />
+        {err && <div style={{ color:"#ef4444", fontSize:12, marginBottom:8 }}>비밀번호가 올바르지 않습니다.</div>}
+        <button onClick={submit} style={{ width:"100%", padding:11, background:"linear-gradient(135deg,#6366f1,#a855f7)", color:"#fff", border:"none", borderRadius:8, fontWeight:700, fontSize:14, cursor:"pointer" }}>
+          입장하기
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── API 키 설정 ── */
+function ApiKeySetup({ onSave }) {
+  const [key, setKey] = useState("");
+  return (
+    <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#1e1e2e,#2d2d3f)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ background:"#fff", borderRadius:16, padding:40, width:420, boxShadow:"0 20px 60px rgba(0,0,0,.3)" }}>
+        <div style={{ textAlign:"center", marginBottom:28 }}>
+          <div style={{ fontSize:36, marginBottom:8 }}>🤖</div>
+          <div style={{ fontWeight:800, fontSize:18, color:"#1e293b" }}>Anthropic API 키 설정</div>
+          <div style={{ color:"#94a3b8", fontSize:12, marginTop:6, lineHeight:1.6 }}>
+            AI 기능 사용을 위해 API 키가 필요합니다.<br/>
+            <a href="https://console.anthropic.com" target="_blank" style={{ color:"#6366f1" }}>console.anthropic.com</a>에서 발급받으세요.
+          </div>
+        </div>
+        <input type="password" value={key} onChange={e => setKey(e.target.value)}
+          placeholder="sk-ant-..." 
+          style={{ width:"100%", padding:"11px 14px", borderRadius:8, border:"1px solid #e2e8f0", fontSize:13, outline:"none", marginBottom:12, fontFamily:"monospace" }} />
+        <div style={{ background:"#fef3c7", borderRadius:8, padding:"10px 12px", marginBottom:16, fontSize:11, color:"#92400e" }}>
+          ⚠️ API 키는 브라우저 세션에만 저장되며, 외부 서버로 전송되지 않습니다.
+        </div>
+        <button onClick={() => {
+          if (key.startsWith("sk-ant-")) { sessionStorage.setItem("apikey", key); onSave(key); }
+          else alert("올바른 API 키 형식이 아닙니다 (sk-ant-...)");
+        }} style={{ width:"100%", padding:11, background:"linear-gradient(135deg,#6366f1,#a855f7)", color:"#fff", border:"none", borderRadius:8, fontWeight:700, fontSize:14, cursor:"pointer" }}>
+          저장하고 시작
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── 메인 앱 ── */
+function MainApp({ apiKey }) {
+  const [projects, setProjects] = useState(initProjects);
+  const [selId, setSelId] = useState(1);
+  const [chat, setChat] = useState([{ role:"assistant", text:"안녕하세요! 프로젝트 관련 궁금한 점을 물어보세요. 태스크 분석, 우선순위 추천, 진행 현황 요약 등을 도와드릴 수 있어요 😊" }]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newTask, setNewTask] = useState({ title:"", status:"todo", priority:"mid", due:"", assignee:"" });
+  const [filter, setFilter] = useState("all");
+  const chatEndRef = useRef(null);
+
+  const proj = projects.find(p => p.id === selId);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:"smooth" }); }, [chat]);
+
+  const filtered = proj.tasks.filter(t => filter === "all" || t.status === filter);
+  const stats = { total: proj.tasks.length, done: proj.tasks.filter(t=>t.status==="done").length, doing: proj.tasks.filter(t=>t.status==="doing").length, todo: proj.tasks.filter(t=>t.status==="todo").length };
+
+  const updateStatus = (tid, st) => setProjects(ps => ps.map(p => p.id!==selId ? p : { ...p, tasks: p.tasks.map(t => t.id===tid ? {...t,status:st} : t) }));
+  const deleteTask = (tid) => setProjects(ps => ps.map(p => p.id!==selId ? p : { ...p, tasks: p.tasks.filter(t=>t.id!==tid) }));
+  const addTask = () => {
+    if (!newTask.title.trim()) return;
+    setProjects(ps => ps.map(p => p.id!==selId ? p : { ...p, tasks: [...p.tasks, {...newTask, id:++taskIdCounter}] }));
+    setNewTask({ title:"", status:"todo", priority:"mid", due:"", assignee:"" });
+    setShowAdd(false);
+  };
+
+  const askAI = async () => {
+    if (!input.trim() || loading) return;
+    const q = input.trim(); setInput("");
+    setChat(c => [...c, { role:"user", text:q }]);
+    setLoading(true);
+    const summary = projects.map(p => ({ name: p.name, tasks: p.tasks.map(t=>`${t.title} [${STATUS[t.status]}] 우선순위:${PRIORITY[t.priority]} 마감:${t.due||"미정"} 담당:${t.assignee||"미정"}`) }));
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        headers: { "Content-Type":"application/json", "x-api-key":apiKey, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+        body: JSON.stringify({
+          model:"claude-sonnet-4-20250514", max_tokens:1000,
+          system:`당신은 교육컨설팅팀의 프로젝트 관리 AI Agent입니다.\n\n프로젝트 현황:\n${JSON.stringify(summary,null,2)}\n\n현재 선택 프로젝트: ${proj.name}\n\n한국어로 실용적이고 구체적인 조언을 해주세요.`,
+          messages: [...chat.slice(-6).map(c=>({role:c.role==="assistant"?"assistant":"user",content:c.text})), {role:"user",content:q}]
+        })
+      });
+      const data = await res.json();
+      setChat(c => [...c, { role:"assistant", text: data.content?.[0]?.text || "응답을 받지 못했어요." }]);
+    } catch { setChat(c => [...c, { role:"assistant", text:"오류가 발생했어요. API 키를 확인해주세요." }]); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display:"flex", height:"100vh", fontSize:14, background:"#f1f5f9" }}>
+      {/* Sidebar */}
+      <div style={{ width:220, background:"#1e1e2e", display:"flex", flexDirection:"column", padding:"16px 0" }}>
+        <div style={{ padding:"0 16px 16px", borderBottom:"1px solid #2d2d3f" }}>
+          <div style={{ color:"#a78bfa", fontWeight:700, fontSize:13, letterSpacing:1 }}>📁 PROJECTS</div>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"8px 0" }}>
+          {projects.map(p => {
+            const pct = p.tasks.length ? Math.round(p.tasks.filter(t=>t.status==="done").length/p.tasks.length*100) : 0;
+            return (
+              <div key={p.id} onClick={() => { setSelId(p.id); setFilter("all"); }}
+                style={{ padding:"10px 16px", cursor:"pointer", background:selId===p.id?"#2d2d3f":"transparent", borderLeft:selId===p.id?`3px solid ${p.color}`:"3px solid transparent" }}>
+                <div style={{ color:selId===p.id?"#fff":"#9ca3af", fontSize:12, fontWeight:600, marginBottom:4, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                  {p.name.replace(/\[.*?\]\s*/,"")}
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <div style={{ flex:1, height:4, background:"#374151", borderRadius:2 }}>
+                    <div style={{ width:`${pct}%`, height:"100%", background:p.color, borderRadius:2 }} />
+                  </div>
+                  <span style={{ color:"#6b7280", fontSize:10 }}>{pct}%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+        <div style={{ background:"#fff", padding:"14px 20px", borderBottom:"1px solid #e2e8f0", display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:10, height:10, borderRadius:"50%", background:proj.color }} />
+          <div>
+            <div style={{ fontWeight:700, color:"#1e293b", fontSize:15 }}>{proj.name}</div>
+            <div style={{ color:"#94a3b8", fontSize:11 }}>태그: {proj.tag}</div>
+          </div>
+          <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
+            {["all","todo","doing","done"].map(s => (
+              <button key={s} onClick={() => setFilter(s)}
+                style={{ padding:"4px 10px", borderRadius:20, border:"none", cursor:"pointer", fontSize:11, fontWeight:600, background:filter===s?proj.color:"#f1f5f9", color:filter===s?"#fff":"#64748b" }}>
+                {s==="all"?"전체":STATUS[s]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display:"flex", gap:12, padding:"12px 20px 0" }}>
+          {[["전체",stats.total,"#6366f1"],["할 일",stats.todo,"#6b7280"],["진행 중",stats.doing,"#3b82f6"],["완료",stats.done,"#10b981"]].map(([l,v,c]) => (
+            <div key={l} style={{ background:"#fff", borderRadius:10, padding:"8px 16px", display:"flex", alignItems:"center", gap:8, boxShadow:"0 1px 3px rgba(0,0,0,.06)" }}>
+              <span style={{ fontSize:20, fontWeight:800, color:c }}>{v}</span>
+              <span style={{ color:"#94a3b8", fontSize:11 }}>{l}</span>
+            </div>
+          ))}
+          <button onClick={() => setShowAdd(true)}
+            style={{ marginLeft:"auto", padding:"8px 14px", background:proj.color, color:"#fff", border:"none", borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:12 }}>
+            + 태스크 추가
+          </button>
+        </div>
+
+        <div style={{ flex:1, overflowY:"auto", padding:20 }}>
+          {showAdd && (
+            <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, border:`2px dashed ${proj.color}` }}>
+              <div style={{ fontWeight:700, color:"#1e293b", marginBottom:10 }}>새 태스크</div>
+              <input value={newTask.title} onChange={e => setNewTask(n=>({...n,title:e.target.value}))}
+                placeholder="태스크 제목" style={{ width:"100%", padding:"6px 10px", borderRadius:6, border:"1px solid #e2e8f0", marginBottom:8, fontSize:13 }} />
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                <select value={newTask.status} onChange={e => setNewTask(n=>({...n,status:e.target.value}))} style={{ padding:"5px 8px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12 }}>
+                  {Object.entries(STATUS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+                <select value={newTask.priority} onChange={e => setNewTask(n=>({...n,priority:e.target.value}))} style={{ padding:"5px 8px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12 }}>
+                  {Object.entries(PRIORITY).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+                <input type="date" value={newTask.due} onChange={e => setNewTask(n=>({...n,due:e.target.value}))} style={{ padding:"5px 8px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12 }} />
+                <input value={newTask.assignee} onChange={e => setNewTask(n=>({...n,assignee:e.target.value}))} placeholder="담당자" style={{ padding:"5px 8px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12 }} />
+                <button onClick={addTask} style={{ padding:"5px 14px", background:proj.color, color:"#fff", border:"none", borderRadius:6, cursor:"pointer", fontWeight:600, fontSize:12 }}>저장</button>
+                <button onClick={() => setShowAdd(false)} style={{ padding:"5px 10px", background:"#f1f5f9", color:"#64748b", border:"none", borderRadius:6, cursor:"pointer", fontSize:12 }}>취소</button>
+              </div>
+            </div>
+          )}
+          {filtered.length===0 && <div style={{ textAlign:"center", color:"#94a3b8", padding:40 }}>태스크가 없습니다.</div>}
+          {filtered.map(t => (
+            <div key={t.id} style={{ background:"#fff", borderRadius:10, padding:"12px 16px", marginBottom:8, boxShadow:"0 1px 3px rgba(0,0,0,.06)", display:"flex", alignItems:"center", gap:12, borderLeft:`4px solid ${SC[t.status]}` }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:600, color:"#1e293b", marginBottom:4, textDecoration:t.status==="done"?"line-through":"none", opacity:t.status==="done"?.5:1 }}>{t.title}</div>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {t.assignee && <span style={{ fontSize:11, color:"#64748b" }}>👤 {t.assignee}</span>}
+                  {t.due && <span style={{ fontSize:11, color:"#64748b" }}>📅 {t.due}</span>}
+                  <span style={{ fontSize:10, padding:"1px 7px", borderRadius:20, background:PC[t.priority]+"20", color:PC[t.priority], fontWeight:700 }}>{PRIORITY[t.priority]}</span>
+                </div>
+              </div>
+              <select value={t.status} onChange={e => updateStatus(t.id, e.target.value)}
+                style={{ padding:"4px 8px", borderRadius:6, border:`1px solid ${SC[t.status]}`, color:SC[t.status], fontWeight:600, fontSize:11, background:SC[t.status]+"15", cursor:"pointer" }}>
+                {Object.entries(STATUS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <button onClick={() => deleteTask(t.id)} style={{ background:"none", border:"none", cursor:"pointer", color:"#cbd5e1", fontSize:16 }}>✕</button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* AI Chat */}
+      <div style={{ width:320, background:"#fff", display:"flex", flexDirection:"column", borderLeft:"1px solid #e2e8f0" }}>
+        <div style={{ padding:"14px 16px", borderBottom:"1px solid #e2e8f0", background:"linear-gradient(135deg,#6366f1,#a855f7)" }}>
+          <div style={{ color:"#fff", fontWeight:700, fontSize:13 }}>🤖 AI Agent</div>
+          <div style={{ color:"#e0e7ff", fontSize:11, marginTop:2 }}>프로젝트 분석 · 우선순위 추천</div>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:12, display:"flex", flexDirection:"column", gap:8 }}>
+          {chat.map((m,i) => (
+            <div key={i} style={{ display:"flex", justifyContent:m.role==="user"?"flex-end":"flex-start" }}>
+              <div style={{ maxWidth:"85%", padding:"8px 12px", borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",
+                background:m.role==="user"?"#6366f1":"#f8fafc", color:m.role==="user"?"#fff":"#1e293b", fontSize:12, lineHeight:1.6, whiteSpace:"pre-wrap" }}>
+                {m.text}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div style={{ display:"flex", justifyContent:"flex-start" }}>
+              <div style={{ padding:"8px 12px", borderRadius:"12px 12px 12px 2px", background:"#f8fafc", fontSize:12, color:"#94a3b8" }}>⏳ 분석 중...</div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+        <div style={{ padding:10, borderTop:"1px solid #e2e8f0" }}>
+          <div style={{ display:"flex", gap:6, marginBottom:6, flexWrap:"wrap" }}>
+            {["현황 요약","리스크 분석","우선순위 추천"].map(q => (
+              <button key={q} onClick={() => setInput(q)}
+                style={{ padding:"3px 9px", borderRadius:20, border:"1px solid #e2e8f0", background:"#f8fafc", color:"#6366f1", fontSize:10, cursor:"pointer", fontWeight:600 }}>{q}</button>
+            ))}
+          </div>
+          <div style={{ display:"flex", gap:6 }}>
+            <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==="Enter" && askAI()}
+              placeholder="AI에게 물어보세요..." disabled={loading}
+              style={{ flex:1, padding:"7px 10px", borderRadius:8, border:"1px solid #e2e8f0", fontSize:12, outline:"none" }} />
+            <button onClick={askAI} disabled={loading}
+              style={{ padding:"7px 12px", background:"#6366f1", color:"#fff", border:"none", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 }}>전송</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 루트 ── */
+function App() {
+  const [authed, setAuthed] = useState(!!sessionStorage.getItem("auth"));
+  const [apiKey, setApiKey] = useState(sessionStorage.getItem("apikey") || "");
+  if (!authed) return <PasswordGate onAuth={() => setAuthed(true)} />;
+  if (!apiKey) return <ApiKeySetup onSave={k => setApiKey(k)} />;
+  return <MainApp apiKey={apiKey} />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
