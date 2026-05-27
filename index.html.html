@@ -199,6 +199,10 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
 
   if(!task) return null;
 
+  // fRef: 항상 최신 f를 가리킴 → flush deps에서 f 제거 → onBlur 핸들러 재생성 안 됨
+  const fRef=useRef(f);
+  fRef.current=f;
+
   // 로컬 변경 (타이핑 중)
   const chg=useCallback((k,v)=>setF(x=>({...x,[k]:v})),[]);
   // 부모에 즉시 반영 (select, checkbox 등)
@@ -206,8 +210,8 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
     const u={...f,[k]:v};
     setF(u); onChange(u);
   },[f,onChange]);
-  // blur 시 부모 동기화
-  const flush=useCallback(()=>onChange(f),[f,onChange]);
+  // blur 시 부모 동기화 — fRef 사용으로 핸들러 재생성 없음
+  const flush=useCallback(()=>onChange(fRef.current),[onChange]);
 
   const toggleSub=(sid)=>{
     const u={...f,subtasks:f.subtasks.map(s=>s.id===sid?{...s,done:!s.done}:s)};
