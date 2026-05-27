@@ -22,8 +22,9 @@
 const { useState, useEffect, useRef, useCallback } = React;
 
 const APP_PASSWORD = "dustn2026";
-const STATUS  = {todo:"할 일",doing:"진행 중",done:"완료"};
-const PRIORITY= {high:"높음",mid:"중간",low:"낮음"};
+const STORAGE_KEY  = "pm_data_v1";
+const STATUS   = {todo:"할 일",doing:"진행 중",done:"완료"};
+const PRIORITY  = {high:"높음",mid:"중간",low:"낮음"};
 const PC={high:"#ef4444",mid:"#f59e0b",low:"#22c55e"};
 const SC={todo:"#6b7280",doing:"#3b82f6",done:"#10b981"};
 const PRI_ORDER={high:0,mid:1,low:2};
@@ -34,7 +35,7 @@ let uid=300;
 const nid=()=>++uid;
 const mkTask=t=>({detailLink:"",refLink:"",notes:"",submitter:"",subtasks:[],...t});
 
-const initProjects=[
+const DEFAULT_PROJECTS=[
   {id:1,name:"[창의재단] 기업연계 정보교원 역량강화",tag:"공동수급",color:"#6366f1",
    year:"2026",period:"2026.06~2026.12",budget:"45,000,000",remark:"협력사 공동수급, 김종범 담당",
    tasks:[
@@ -77,6 +78,14 @@ const initProjects=[
   ]},
 ];
 
+/* ── localStorage 헬퍼 ── */
+function loadStorage(){
+  try{ const d=localStorage.getItem(STORAGE_KEY); return d?JSON.parse(d):null; }catch(e){return null;}
+}
+function saveStorage(data){
+  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(data)); }catch(e){}
+}
+
 /* ── 비밀번호 ── */
 function PasswordGate({onAuth}){
   const [pw,setPw]=useState(""), [err,setErr]=useState(false);
@@ -89,8 +98,9 @@ function PasswordGate({onAuth}){
           <div style={{fontWeight:800,fontSize:18,color:"#1e293b"}}>팀 전용 접근</div>
           <div style={{color:"#94a3b8",fontSize:13,marginTop:4}}>비밀번호를 입력하세요</div>
         </div>
-        <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&go()}
-          placeholder="비밀번호" autoFocus style={{width:"100%",padding:"11px 14px",borderRadius:8,border:err?"2px solid #ef4444":"1px solid #e2e8f0",fontSize:14,outline:"none",marginBottom:8}}/>
+        <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}}
+          onKeyDown={e=>e.key==="Enter"&&go()} placeholder="비밀번호" autoFocus
+          style={{width:"100%",padding:"11px 14px",borderRadius:8,border:err?"2px solid #ef4444":"1px solid #e2e8f0",fontSize:14,outline:"none",marginBottom:8}}/>
         {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:8}}>비밀번호가 올바르지 않습니다.</div>}
         <button onClick={go} style={{width:"100%",padding:11,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:14,cursor:"pointer"}}>입장하기</button>
       </div>
@@ -120,14 +130,16 @@ function MemberSelect({value,onChange,members,onAddMember,onDeleteMember}){
         ))}
       </div>
       <div style={{display:"flex",gap:5,marginTop:6}}>
-        <input ref={inputRef} value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doAdd()} placeholder="새 이름 추가" className="fi" style={{flex:1,fontSize:11}}/>
+        <input ref={inputRef} value={newName} onChange={e=>setNewName(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&doAdd()} placeholder="새 이름 추가" className="fi" style={{flex:1,fontSize:11}}/>
         <button onClick={doAdd} style={{padding:"3px 8px",background:"#6366f1",color:"#fff",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700}}>추가</button>
       </div>
     </div>
   );
   if(mode==="add") return(
     <div style={{display:"flex",gap:5}}>
-      <input ref={inputRef} value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doAdd()} placeholder="이름 입력" className="fi" style={{flex:1}}/>
+      <input ref={inputRef} value={newName} onChange={e=>setNewName(e.target.value)}
+        onKeyDown={e=>e.key==="Enter"&&doAdd()} placeholder="이름 입력" className="fi" style={{flex:1}}/>
       <button onClick={doAdd} style={{padding:"4px 9px",background:"#6366f1",color:"#fff",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:700}}>확인</button>
       <button onClick={()=>setMode("normal")} style={{padding:"4px 7px",background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,cursor:"pointer",fontSize:11}}>취소</button>
     </div>
@@ -180,22 +192,40 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
   const [dirty,setDirty]=useState(false);
   const [newSub,setNewSub]=useState("");
 
-  // 다른 태스크로 전환 시만 로컬 초기화
+  // 다른 태스크 전환 시만 초기화
   const prevId=useRef(taskId);
-  if(prevId.current!==taskId){prevId.current=taskId;setF(task||{});setDirty(false);}
+  if(prevId.current!==taskId){
+    prevId.current=taskId;
+    setF(task||{});
+    setDirty(false);
+  }
 
+  // fRef: 저장 시 최신 f를 읽기 위해
   const fRef=useRef(f);
   fRef.current=f;
 
+  // memoRef: textarea DOM을 직접 참조 → React 상태와 완전 분리
+  const memoRef=useRef(null);
+
+  // 태스크 전환 시 메모 textarea 값 리셋
+  useEffect(()=>{
+    if(memoRef.current) memoRef.current.value=task?.notes||"";
+  },[taskId]);
+
   if(!task)return null;
 
-  // 필드 변경 → 로컬만 업데이트, dirty 표시
+  // 메모 외 필드 변경
   const chg=useCallback((k,v)=>{setF(x=>({...x,[k]:v}));setDirty(true);},[]);
 
-  // 저장 버튼 클릭 시 부모에 반영
-  const save=useCallback(()=>{onChange(fRef.current);setDirty(false);},[onChange]);
+  // 저장: f의 모든 필드 + 메모 DOM 값을 합쳐서 부모에 반영
+  const save=useCallback(()=>{
+    const notes=memoRef.current?memoRef.current.value:(fRef.current.notes||"");
+    const updated={...fRef.current,notes};
+    onChange(updated);
+    setDirty(false);
+  },[onChange]);
 
-  // 하위 작업은 즉시 반영 (체크/추가/삭제)
+  // 하위 작업은 즉시 반영
   const toggleSub=sid=>{const u={...f,subtasks:f.subtasks.map(s=>s.id===sid?{...s,done:!s.done}:s)};setF(u);onChange(u);};
   const addSub=()=>{if(!newSub.trim())return;const u={...f,subtasks:[...f.subtasks,{id:nid(),title:newSub.trim(),done:false}]};setF(u);onChange(u);setNewSub("");};
   const delSub=sid=>{const u={...f,subtasks:f.subtasks.filter(s=>s.id!==sid)};setF(u);onChange(u);};
@@ -210,13 +240,11 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
 
   return(
     <div style={{width:320,background:"#fff",borderLeft:"1px solid #e2e8f0",display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0}}>
-      {/* 헤더 + 저장 버튼 */}
       <div style={{padding:"11px 14px",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",gap:8}}>
         <div style={{flex:1,fontWeight:700,color:"#1e293b",fontSize:13,lineHeight:1.4}}>{f.title}</div>
         <button onClick={save}
           style={{padding:"4px 13px",background:dirty?"#6366f1":"#f1f5f9",color:dirty?"#fff":"#94a3b8",
-            border:"none",borderRadius:6,cursor:dirty?"pointer":"default",fontSize:11,fontWeight:700,
-            transition:"all 0.15s",flexShrink:0}}>
+            border:"none",borderRadius:6,cursor:dirty?"pointer":"default",fontSize:11,fontWeight:700,transition:"all .15s",flexShrink:0}}>
           {dirty?"💾 저장":"저장됨"}
         </button>
         <button onClick={onClose} style={{background:"none",border:"none",color:"#94a3b8",cursor:"pointer",fontSize:17}}>✕</button>
@@ -230,7 +258,6 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
             {f.status==="done"?"✅ 완료됨":"○ 완료로 표시"}
           </button>
         </div>
-
         <Row label="담당자">
           <MemberSelect value={f.assignee} onChange={v=>chg("assignee",v)} members={members} onAddMember={onAddMember} onDeleteMember={onDeleteMember}/>
         </Row>
@@ -260,10 +287,16 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
           <input value={f.refLink||""} onChange={e=>chg("refLink",e.target.value)} className="fi" placeholder="https://"/>
           {f.refLink&&<a href={f.refLink} target="_blank" style={{fontSize:10,color:projColor,display:"block",marginTop:3}}>🔗 링크 열기</a>}
         </Row>
+
+        {/* 메모: DOM ref로 완전 분리 — React 상태 업데이트 없음 → 커서 안 사라짐 */}
         <Row label="메모">
-          <textarea key={taskId} defaultValue={f.notes||""}
-            onChange={e=>chg("notes",e.target.value)}
-            className="fi" placeholder="메모..." rows={3} style={{resize:"vertical",lineHeight:1.5}}/>
+          <textarea
+            ref={memoRef}
+            defaultValue={f.notes||""}
+            onChange={()=>setDirty(true)}
+            className="fi" placeholder="메모..." rows={3}
+            style={{resize:"vertical",lineHeight:1.5}}
+          />
         </Row>
 
         {/* 하위 작업 */}
@@ -294,9 +327,8 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
           </div>
         </div>
 
-        {/* 미저장 안내 */}
         {dirty&&<div style={{marginTop:12,padding:"8px 12px",background:"#fef3c7",borderRadius:8,fontSize:11,color:"#92400e"}}>
-          ⚠️ 저장되지 않은 변경사항이 있습니다. 상단 <b>💾 저장</b> 버튼을 눌러주세요.
+          ⚠️ 미저장 변경사항이 있습니다. 상단 <b>💾 저장</b>을 눌러주세요.
         </div>}
       </div>
     </div>
@@ -415,8 +447,10 @@ function Dashboard({projects,onSelectProject,onUpdateProject}){
 
 /* ── 메인 ── */
 function MainApp(){
-  const [projects,setProjects]=useState(initProjects);
-  const [members,setMembers]=useState(INIT_MEMBERS);
+  // localStorage에서 초기값 로드
+  const saved=loadStorage();
+  const [projects,setProjects]=useState(saved?.projects||DEFAULT_PROJECTS);
+  const [members,setMembers]=useState(saved?.members||INIT_MEMBERS);
   const [view,setView]=useState("dashboard");
   const [filter,setFilter]=useState("all");
   const [sort,setSort]=useState("default");
@@ -425,9 +459,12 @@ function MainApp(){
   const [showAddProj,setShowAddProj]=useState(false);
   const [newProj,setNewProj]=useState({name:"",tag:"",color:"#6366f1",year:"",period:"",budget:"",remark:""});
 
+  // projects 또는 members 변경 시 localStorage에 자동 저장
+  useEffect(()=>{ saveStorage({projects,members}); },[projects,members]);
+
   const proj=view!=="dashboard"?projects.find(p=>p.id===view):null;
-  const addMember=n=>{setMembers(m=>m.includes(n)?m:[...m,n]);};
-  const deleteMember=n=>{setMembers(m=>m.filter(x=>x!==n));};
+  const addMember=n=>setMembers(m=>m.includes(n)?m:[...m,n]);
+  const deleteMember=n=>setMembers(m=>m.filter(x=>x!==n));
   const updateProjInfo=(id,data)=>setProjects(ps=>ps.map(p=>p.id!==id?p:{...p,...data}));
   const updateProjTasks=useCallback(tasks=>setProjects(ps=>ps.map(p=>p.id!==view?p:{...p,tasks})),[view]);
   const updateTask=useCallback(upd=>updateProjTasks(proj?.tasks.map(t=>t.id===upd.id?upd:t)||[]),[proj,updateProjTasks]);
