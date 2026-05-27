@@ -7,80 +7,77 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif; }</style>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif; }
+    input, select, textarea { font-family: inherit; }
+    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState } = React;
+const { useState, useRef } = React;
 
 // ============================================================
 // 🔒 비밀번호 설정 (배포 전 반드시 변경하세요!)
-const APP_PASSWORD = "iscream2024";
+const APP_PASSWORD = "dustn2026";
 // ============================================================
 
-const STATUS = { todo: "할 일", doing: "진행 중", done: "완료" };
-const PRIORITY = { high: "높음", mid: "중간", low: "낮음" };
-const PC = { high: "#ef4444", mid: "#f59e0b", low: "#22c55e" };
-const SC = { todo: "#6b7280", doing: "#3b82f6", done: "#10b981" };
+const STATUS = { todo:"할 일", doing:"진행 중", done:"완료" };
+const PRIORITY = { high:"높음", mid:"중간", low:"낮음" };
+const PC = { high:"#ef4444", mid:"#f59e0b", low:"#22c55e" };
+const SC = { todo:"#6b7280", doing:"#3b82f6", done:"#10b981" };
+const COLORS = ["#6366f1","#0ea5e9","#f59e0b","#10b981","#ec4899","#8b5cf6","#f97316"];
+
+let uid = 200;
+const nid = () => ++uid;
+
+const mkTask = (t) => ({
+  detailLink:"", refLink:"", notes:"", submitter:"", subtasks:[], ...t
+});
 
 const initProjects = [
-  {
-    id: 1, name: "[창의재단] 기업연계 정보교원 역량강화", tag: "공동수급", color: "#6366f1",
-    tasks: [
-      { id: 1, title: "협력사 수정 사업계획서 및 과업협상서 취합", status: "done", priority: "high", due: "2025-05-21", assignee: "교육컨설팅팀" },
-      { id: 2, title: "최종 검토 후 창의재단 전달", status: "done", priority: "high", due: "2025-05-22", assignee: "교육컨설팅팀" },
-      { id: 3, title: "주관사 협약", status: "doing", priority: "high", due: "2025-06-01", assignee: "교육컨설팅팀" },
-      { id: 4, title: "창의재단 김종범 연구원님께 사업계획서 및 과업협상서 전달", status: "todo", priority: "high", due: "2025-06-04", assignee: "교육컨설팅팀" },
-      { id: 5, title: "연수 심의 자료 공문 제출", status: "todo", priority: "mid", due: "2025-06-10", assignee: "교육컨설팅팀" },
-      { id: 6, title: "사전모집 설문 홍보", status: "done", priority: "mid", due: "2025-05-19", assignee: "교육컨설팅팀" },
-    ],
-  },
-  {
-    id: 2, name: "[KERIS] 중등 AI 교육 담당교원 역량강화", tag: "단독", color: "#0ea5e9",
-    tasks: [
-      { id: 1, title: "운영 페이지 구성", status: "doing", priority: "mid", due: "", assignee: "" },
-      { id: 2, title: "연수 일정(안) 수립 - 단기인력", status: "todo", priority: "mid", due: "", assignee: "" },
-    ],
-  },
-  {
-    id: 3, name: "[화성오산] AI 디지털 기반 블렌디드 연수", tag: "수의계약", color: "#f59e0b",
-    tasks: [
-      { id: 1, title: "보조강사 선발 및 확정", status: "done", priority: "high", due: "2025-04-30", assignee: "권다솜/서혜빈" },
-      { id: 2, title: "집필 파트 배분 (1차 회의)", status: "done", priority: "high", due: "2025-04-30", assignee: "권다솜/서혜빈" },
-      { id: 3, title: "1차 초안 작성 (수업설계안 및 교안)", status: "done", priority: "high", due: "2025-05-07", assignee: "권다솜/서혜빈" },
-      { id: 4, title: "과정 검토 (2차 회의)", status: "done", priority: "high", due: "2025-05-09", assignee: "전체" },
-      { id: 5, title: "최종 보완 및 제출", status: "done", priority: "high", due: "2025-05-11", assignee: "권다솜/서혜빈" },
-      { id: 6, title: "집합 연수 운영", status: "todo", priority: "high", due: "2025-06-27", assignee: "윤양호" },
-    ],
-  },
-  {
-    id: 4, name: "[인천교육청] 디지털 기반 교육혁신 교원역량강화", tag: "단독", color: "#10b981",
-    tasks: [
-      { id: 1, title: "1차 초안 작성", status: "done", priority: "high", due: "2026-05-06", assignee: "" },
-      { id: 2, title: "제안서 제출", status: "done", priority: "high", due: "2026-05-08", assignee: "" },
-      { id: 3, title: "평가 대응", status: "done", priority: "high", due: "2026-05-20", assignee: "" },
-    ],
-  },
-  {
-    id: 5, name: "[경기도교육청미래과학교육원] AI·디지털 기반 교육혁신", tag: "공동수급", color: "#ec4899",
-    tasks: [
-      { id: 1, title: "사전규격 의견 검토 및 답변 대응", status: "done", priority: "high", due: "", assignee: "" },
-      { id: 2, title: "공동수급체(분담이행방식) 구성 준비", status: "doing", priority: "high", due: "", assignee: "" },
-      { id: 3, title: "입찰 참여 준비", status: "todo", priority: "mid", due: "", assignee: "" },
-    ],
-  },
+  { id:1, name:"[창의재단] 기업연계 정보교원 역량강화", tag:"공동수급", color:"#6366f1", tasks:[
+    mkTask({ id:1, title:"협력사 수정 사업계획서 및 과업협상서 취합", status:"done", priority:"high", due:"2025-05-21", assignee:"교육컨설팅팀", submitter:"박혜미",
+      subtasks:[{id:nid(),title:"협력사A 서류 취합",done:true},{id:nid(),title:"협력사B 서류 취합",done:true}] }),
+    mkTask({ id:2, title:"최종 검토 후 창의재단 전달", status:"done", priority:"high", due:"2025-05-22", assignee:"교육컨설팅팀", submitter:"박혜미" }),
+    mkTask({ id:3, title:"주관사 협약", status:"doing", priority:"high", due:"2025-06-01", assignee:"교육컨설팅팀",
+      subtasks:[{id:nid(),title:"협약서 초안 검토",done:true},{id:nid(),title:"법무팀 확인",done:false}] }),
+    mkTask({ id:4, title:"창의재단 김종범 연구원님께 사업계획서 및 과업협상서 전달", status:"todo", priority:"high", due:"2025-06-04", assignee:"교육컨설팅팀" }),
+    mkTask({ id:5, title:"연수 심의 자료 공문 제출", status:"todo", priority:"mid", due:"2025-06-10", assignee:"교육컨설팅팀" }),
+    mkTask({ id:6, title:"사전모집 설문 홍보", status:"done", priority:"mid", due:"2025-05-19", assignee:"교육컨설팅팀" }),
+  ]},
+  { id:2, name:"[KERIS] 중등 AI 교육 담당교원 역량강화", tag:"단독", color:"#0ea5e9", tasks:[
+    mkTask({ id:7, title:"운영 페이지 구성", status:"doing", priority:"mid", due:"", assignee:"" }),
+    mkTask({ id:8, title:"연수 일정(안) 수립 - 단기인력", status:"todo", priority:"mid", due:"", assignee:"" }),
+  ]},
+  { id:3, name:"[화성오산] AI 디지털 기반 블렌디드 연수", tag:"수의계약", color:"#f59e0b", tasks:[
+    mkTask({ id:9, title:"보조강사 선발 및 확정", status:"done", priority:"high", due:"2025-04-30", assignee:"권다솜/서혜빈" }),
+    mkTask({ id:10, title:"집필 파트 배분 (1차 회의)", status:"done", priority:"high", due:"2025-04-30", assignee:"권다솜/서혜빈" }),
+    mkTask({ id:11, title:"1차 초안 작성 (수업설계안 및 교안)", status:"done", priority:"high", due:"2025-05-07", assignee:"권다솜/서혜빈",
+      subtasks:[{id:nid(),title:"수업설계안 작성",done:true},{id:nid(),title:"교안 작성",done:true}] }),
+    mkTask({ id:12, title:"과정 검토 (2차 회의)", status:"done", priority:"high", due:"2025-05-09", assignee:"전체" }),
+    mkTask({ id:13, title:"최종 보완 및 제출", status:"done", priority:"high", due:"2025-05-11", assignee:"권다솜/서혜빈" }),
+    mkTask({ id:14, title:"집합 연수 운영", status:"todo", priority:"high", due:"2025-06-27", assignee:"윤양호" }),
+  ]},
+  { id:4, name:"[인천교육청] 디지털 기반 교육혁신 교원역량강화", tag:"단독", color:"#10b981", tasks:[
+    mkTask({ id:15, title:"1차 초안 작성", status:"done", priority:"high", due:"2026-05-06", assignee:"" }),
+    mkTask({ id:16, title:"제안서 제출", status:"done", priority:"high", due:"2026-05-08", assignee:"" }),
+    mkTask({ id:17, title:"평가 대응", status:"done", priority:"high", due:"2026-05-20", assignee:"" }),
+  ]},
+  { id:5, name:"[경기도교육청미래과학교육원] AI·디지털 기반 교육혁신", tag:"공동수급", color:"#ec4899", tasks:[
+    mkTask({ id:18, title:"사전규격 의견 검토 및 답변 대응", status:"done", priority:"high", due:"", assignee:"" }),
+    mkTask({ id:19, title:"공동수급체(분담이행방식) 구성 준비", status:"doing", priority:"high", due:"", assignee:"",
+      subtasks:[{id:nid(),title:"운수업체 파트너 선정",done:false},{id:nid(),title:"공동수급 계약서 준비",done:false}] }),
+    mkTask({ id:20, title:"입찰 참여 준비", status:"todo", priority:"mid", due:"", assignee:"" }),
+  ]},
 ];
-
-let uid = 100;
 
 /* ── 비밀번호 게이트 ── */
 function PasswordGate({ onAuth }) {
   const [pw, setPw] = useState(""), [err, setErr] = useState(false);
-  const submit = () => {
-    if (pw === APP_PASSWORD) { sessionStorage.setItem("auth","1"); onAuth(); }
-    else { setErr(true); setPw(""); }
-  };
+  const go = () => { if (pw===APP_PASSWORD){sessionStorage.setItem("auth","1");onAuth();}else{setErr(true);setPw("");} };
   return (
     <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#1e1e2e,#2d2d3f)", display:"flex", alignItems:"center", justifyContent:"center" }}>
       <div style={{ background:"#fff", borderRadius:16, padding:40, width:360, boxShadow:"0 20px 60px rgba(0,0,0,.3)" }}>
@@ -89,13 +86,124 @@ function PasswordGate({ onAuth }) {
           <div style={{ fontWeight:800, fontSize:18, color:"#1e293b" }}>팀 전용 접근</div>
           <div style={{ color:"#94a3b8", fontSize:13, marginTop:4 }}>비밀번호를 입력하세요</div>
         </div>
-        <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}}
-          onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="비밀번호" autoFocus
+        <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&go()}
+          placeholder="비밀번호" autoFocus
           style={{ width:"100%", padding:"11px 14px", borderRadius:8, border:err?"2px solid #ef4444":"1px solid #e2e8f0", fontSize:14, outline:"none", marginBottom:8 }} />
         {err && <div style={{ color:"#ef4444", fontSize:12, marginBottom:8 }}>비밀번호가 올바르지 않습니다.</div>}
-        <button onClick={submit} style={{ width:"100%", padding:11, background:"linear-gradient(135deg,#6366f1,#a855f7)", color:"#fff", border:"none", borderRadius:8, fontWeight:700, fontSize:14, cursor:"pointer" }}>
-          입장하기
-        </button>
+        <button onClick={go} style={{ width:"100%", padding:11, background:"linear-gradient(135deg,#6366f1,#a855f7)", color:"#fff", border:"none", borderRadius:8, fontWeight:700, fontSize:14, cursor:"pointer" }}>입장하기</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── 상세 패널 ── */
+function DetailPanel({ task, projColor, onClose, onChange }) {
+  const [newSub, setNewSub] = useState("");
+  if (!task) return null;
+
+  const upd = (key, val) => onChange({ ...task, [key]: val });
+  const toggleSub = (sid) => onChange({ ...task, subtasks: task.subtasks.map(s => s.id===sid?{...s,done:!s.done}:s) });
+  const addSub = () => {
+    if (!newSub.trim()) return;
+    onChange({ ...task, subtasks: [...task.subtasks, { id:nid(), title:newSub.trim(), done:false }] });
+    setNewSub("");
+  };
+  const delSub = (sid) => onChange({ ...task, subtasks: task.subtasks.filter(s=>s.id!==sid) });
+
+  const doneCount = task.subtasks.filter(s=>s.done).length;
+
+  const Row = ({ label, children }) => (
+    <div style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"9px 0", borderBottom:"1px solid #f1f5f9" }}>
+      <div style={{ width:80, color:"#94a3b8", fontSize:12, paddingTop:2, flexShrink:0 }}>{label}</div>
+      <div style={{ flex:1, fontSize:13 }}>{children}</div>
+    </div>
+  );
+
+  const fieldStyle = { width:"100%", padding:"4px 8px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12, outline:"none", background:"#fff" };
+
+  return (
+    <div style={{ width:340, background:"#fff", borderLeft:"1px solid #e2e8f0", display:"flex", flexDirection:"column", overflow:"hidden", flexShrink:0 }}>
+      {/* Panel header */}
+      <div style={{ padding:"14px 16px", borderBottom:"1px solid #e2e8f0", display:"flex", alignItems:"center", gap:8 }}>
+        <div style={{ flex:1, fontWeight:700, color:"#1e293b", fontSize:14, lineHeight:1.4 }}>{task.title}</div>
+        <button onClick={onClose} style={{ background:"none", border:"none", color:"#94a3b8", cursor:"pointer", fontSize:18, flexShrink:0 }}>✕</button>
+      </div>
+
+      <div style={{ flex:1, overflowY:"auto", padding:"0 16px 16px" }}>
+        {/* 완료 버튼 */}
+        <div style={{ padding:"12px 0", borderBottom:"1px solid #f1f5f9" }}>
+          <button onClick={() => upd("status", task.status==="done"?"todo":"done")}
+            style={{ padding:"6px 14px", borderRadius:8, border:`1px solid ${task.status==="done"?"#10b981":"#e2e8f0"}`,
+              background:task.status==="done"?"#d1fae5":"#f8fafc", color:task.status==="done"?"#10b981":"#64748b",
+              fontSize:12, fontWeight:700, cursor:"pointer" }}>
+            {task.status==="done" ? "✅ 완료됨" : "○ 완료로 표시"}
+          </button>
+        </div>
+
+        {/* Fields */}
+        <Row label="담당자">
+          <input value={task.assignee} onChange={e=>upd("assignee",e.target.value)} placeholder="담당자 입력" style={fieldStyle} />
+        </Row>
+        <Row label="우선순위">
+          <select value={task.priority} onChange={e=>upd("priority",e.target.value)}
+            style={{ ...fieldStyle, color:PC[task.priority], fontWeight:700, background:PC[task.priority]+"15", border:`1px solid ${PC[task.priority]}40` }}>
+            {Object.entries(PRIORITY).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+          </select>
+        </Row>
+        <Row label="제출한 사람">
+          <input value={task.submitter} onChange={e=>upd("submitter",e.target.value)} placeholder="이름 입력" style={fieldStyle} />
+        </Row>
+        <Row label="기한">
+          <input type="date" value={task.due} onChange={e=>upd("due",e.target.value)} style={fieldStyle} />
+        </Row>
+        <Row label="상태">
+          <select value={task.status} onChange={e=>upd("status",e.target.value)}
+            style={{ ...fieldStyle, color:SC[task.status], fontWeight:700, background:SC[task.status]+"15", border:`1px solid ${SC[task.status]}40` }}>
+            {Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+          </select>
+        </Row>
+        <Row label="세부 정보">
+          <input value={task.detailLink} onChange={e=>upd("detailLink",e.target.value)} placeholder="https://" style={fieldStyle} />
+          {task.detailLink && <a href={task.detailLink} target="_blank" style={{ fontSize:11, color:projColor, display:"block", marginTop:3 }}>🔗 링크 열기</a>}
+        </Row>
+        <Row label="참고 링크">
+          <input value={task.refLink} onChange={e=>upd("refLink",e.target.value)} placeholder="https://" style={fieldStyle} />
+          {task.refLink && <a href={task.refLink} target="_blank" style={{ fontSize:11, color:projColor, display:"block", marginTop:3 }}>🔗 링크 열기</a>}
+        </Row>
+        <Row label="메모">
+          <textarea value={task.notes} onChange={e=>upd("notes",e.target.value)} placeholder="메모 입력..."
+            rows={3} style={{ ...fieldStyle, resize:"vertical", lineHeight:1.5 }} />
+        </Row>
+
+        {/* 하위 작업 */}
+        <div style={{ paddingTop:14 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:10 }}>
+            <span style={{ fontWeight:700, color:"#1e293b", fontSize:13 }}>하위 작업</span>
+            {task.subtasks.length > 0 && (
+              <span style={{ fontSize:11, color:"#94a3b8", background:"#f1f5f9", padding:"1px 7px", borderRadius:20 }}>{doneCount}/{task.subtasks.length}</span>
+            )}
+          </div>
+          {task.subtasks.length > 0 && (
+            <div style={{ background:"#f8fafc", borderRadius:8, padding:"4px 0", marginBottom:8 }}>
+              {task.subtasks.map(s => (
+                <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 10px" }}>
+                  <div onClick={()=>toggleSub(s.id)}
+                    style={{ width:18, height:18, borderRadius:"50%", border:s.done?"none":`2px solid #cbd5e1`, background:s.done?projColor:"transparent",
+                      display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
+                    {s.done && <span style={{ color:"#fff", fontSize:10, fontWeight:900 }}>✓</span>}
+                  </div>
+                  <span style={{ flex:1, fontSize:12, color:s.done?"#94a3b8":"#1e293b", textDecoration:s.done?"line-through":"none" }}>{s.title}</span>
+                  <button onClick={()=>delSub(s.id)} style={{ background:"none", border:"none", color:"#cbd5e1", cursor:"pointer", fontSize:13 }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ display:"flex", gap:6 }}>
+            <input value={newSub} onChange={e=>setNewSub(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addSub()}
+              placeholder="+ 하위 작업 추가" style={{ flex:1, padding:"5px 10px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12, outline:"none" }} />
+            <button onClick={addSub} style={{ padding:"5px 10px", background:projColor, color:"#fff", border:"none", borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:700 }}>+</button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -106,66 +214,57 @@ function MainApp() {
   const [projects, setProjects] = useState(initProjects);
   const [selId, setSelId] = useState(1);
   const [filter, setFilter] = useState("all");
+  const [selTask, setSelTask] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [newTask, setNewTask] = useState({ title:"", status:"todo", priority:"mid", due:"", assignee:"" });
   const [showAddProj, setShowAddProj] = useState(false);
   const [newProj, setNewProj] = useState({ name:"", tag:"", color:"#6366f1" });
 
-  const proj = projects.find(p => p.id === selId);
-  const filtered = proj.tasks.filter(t => filter==="all" || t.status===filter);
-  const stats = {
-    total: proj.tasks.length,
-    done: proj.tasks.filter(t=>t.status==="done").length,
-    doing: proj.tasks.filter(t=>t.status==="doing").length,
-    todo: proj.tasks.filter(t=>t.status==="todo").length,
-  };
+  const proj = projects.find(p=>p.id===selId);
+  const filtered = proj.tasks.filter(t=>filter==="all"||t.status===filter);
+  const stats = { total:proj.tasks.length, done:proj.tasks.filter(t=>t.status==="done").length, doing:proj.tasks.filter(t=>t.status==="doing").length, todo:proj.tasks.filter(t=>t.status==="todo").length };
 
-  const updateStatus = (tid, st) => setProjects(ps => ps.map(p => p.id!==selId ? p : { ...p, tasks: p.tasks.map(t => t.id===tid?{...t,status:st}:t) }));
-  const deleteTask = (tid) => setProjects(ps => ps.map(p => p.id!==selId ? p : { ...p, tasks: p.tasks.filter(t=>t.id!==tid) }));
+  const updateProj = (tasks) => setProjects(ps=>ps.map(p=>p.id!==selId?p:{...p,tasks}));
+  const updateTask = (upd) => { updateProj(proj.tasks.map(t=>t.id===upd.id?upd:t)); setSelTask(upd); };
+  const deleteTask = (tid) => { updateProj(proj.tasks.filter(t=>t.id!==tid)); if(selTask?.id===tid)setSelTask(null); };
   const addTask = () => {
     if (!newTask.title.trim()) return;
-    setProjects(ps => ps.map(p => p.id!==selId ? p : { ...p, tasks:[...p.tasks,{...newTask,id:++uid}] }));
+    const t = mkTask({...newTask, id:nid()});
+    updateProj([...proj.tasks, t]);
     setNewTask({ title:"", status:"todo", priority:"mid", due:"", assignee:"" });
     setShowAdd(false);
+    setSelTask(t);
   };
   const addProject = () => {
     if (!newProj.name.trim()) return;
-    const id = ++uid;
-    setProjects(ps => [...ps, { ...newProj, id, tasks:[] }]);
-    setSelId(id); setShowAddProj(false);
+    const id = nid();
+    setProjects(ps=>[...ps,{...newProj,id,tasks:[]}]);
+    setSelId(id); setShowAddProj(false); setSelTask(null);
     setNewProj({ name:"", tag:"", color:"#6366f1" });
   };
   const deleteProject = (id) => {
     if (!confirm("프로젝트를 삭제할까요?")) return;
     const rest = projects.filter(p=>p.id!==id);
-    setProjects(rest);
-    if (selId===id) setSelId(rest[0]?.id);
+    setProjects(rest); if(selId===id){setSelId(rest[0]?.id);setSelTask(null);}
   };
-
-  const COLORS = ["#6366f1","#0ea5e9","#f59e0b","#10b981","#ec4899","#8b5cf6","#f97316"];
 
   return (
     <div style={{ display:"flex", height:"100vh", fontSize:14, background:"#f1f5f9" }}>
 
       {/* Sidebar */}
-      <div style={{ width:230, background:"#1e1e2e", display:"flex", flexDirection:"column" }}>
+      <div style={{ width:220, background:"#1e1e2e", display:"flex", flexDirection:"column", flexShrink:0 }}>
         <div style={{ padding:"16px 16px 12px", borderBottom:"1px solid #2d2d3f", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ color:"#a78bfa", fontWeight:700, fontSize:13, letterSpacing:1 }}>📁 PROJECTS</div>
-          <button onClick={()=>setShowAddProj(true)} title="프로젝트 추가"
-            style={{ background:"#2d2d3f", border:"none", color:"#a78bfa", borderRadius:6, width:24, height:24, cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
+          <button onClick={()=>setShowAddProj(v=>!v)} style={{ background:"#2d2d3f", border:"none", color:"#a78bfa", borderRadius:6, width:24, height:24, cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>+</button>
         </div>
-
         {showAddProj && (
           <div style={{ padding:"10px 12px", background:"#16162a", borderBottom:"1px solid #2d2d3f" }}>
-            <input value={newProj.name} onChange={e=>setNewProj(n=>({...n,name:e.target.value}))}
-              placeholder="프로젝트명" style={{ width:"100%", padding:"5px 8px", borderRadius:6, border:"none", background:"#2d2d3f", color:"#fff", fontSize:12, marginBottom:6 }} />
-            <input value={newProj.tag} onChange={e=>setNewProj(n=>({...n,tag:e.target.value}))}
-              placeholder="태그 (예: 단독)" style={{ width:"100%", padding:"5px 8px", borderRadius:6, border:"none", background:"#2d2d3f", color:"#fff", fontSize:12, marginBottom:6 }} />
+            <input value={newProj.name} onChange={e=>setNewProj(n=>({...n,name:e.target.value}))} placeholder="프로젝트명"
+              style={{ width:"100%", padding:"5px 8px", borderRadius:6, border:"none", background:"#2d2d3f", color:"#fff", fontSize:12, marginBottom:6, outline:"none" }} />
+            <input value={newProj.tag} onChange={e=>setNewProj(n=>({...n,tag:e.target.value}))} placeholder="태그 (예: 단독)"
+              style={{ width:"100%", padding:"5px 8px", borderRadius:6, border:"none", background:"#2d2d3f", color:"#fff", fontSize:12, marginBottom:6, outline:"none" }} />
             <div style={{ display:"flex", gap:4, marginBottom:8 }}>
-              {COLORS.map(c => (
-                <div key={c} onClick={()=>setNewProj(n=>({...n,color:c}))}
-                  style={{ width:18, height:18, borderRadius:"50%", background:c, cursor:"pointer", border:newProj.color===c?"2px solid #fff":"2px solid transparent" }} />
-              ))}
+              {COLORS.map(c=><div key={c} onClick={()=>setNewProj(n=>({...n,color:c}))} style={{ width:18, height:18, borderRadius:"50%", background:c, cursor:"pointer", border:newProj.color===c?"2px solid #fff":"2px solid transparent" }} />)}
             </div>
             <div style={{ display:"flex", gap:6 }}>
               <button onClick={addProject} style={{ flex:1, padding:"4px 0", background:"#6366f1", color:"#fff", border:"none", borderRadius:6, cursor:"pointer", fontSize:11, fontWeight:700 }}>추가</button>
@@ -173,28 +272,18 @@ function MainApp() {
             </div>
           </div>
         )}
-
         <div style={{ flex:1, overflowY:"auto", padding:"8px 0" }}>
-          {projects.map(p => {
-            const pct = p.tasks.length ? Math.round(p.tasks.filter(t=>t.status==="done").length/p.tasks.length*100) : 0;
+          {projects.map(p=>{
+            const pct = p.tasks.length?Math.round(p.tasks.filter(t=>t.status==="done").length/p.tasks.length*100):0;
             return (
-              <div key={p.id} onClick={()=>{setSelId(p.id);setFilter("all");}}
-                style={{ padding:"10px 16px", cursor:"pointer", background:selId===p.id?"#2d2d3f":"transparent",
-                  borderLeft:selId===p.id?`3px solid ${p.color}`:"3px solid transparent", position:"relative" }}>
-                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between" }}>
-                  <div style={{ color:selId===p.id?"#fff":"#9ca3af", fontSize:12, fontWeight:600, marginBottom:4,
-                    overflow:"hidden", textOverflow:"ellipsis", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
-                    {p.name}
-                  </div>
-                  {selId===p.id && (
-                    <button onClick={e=>{e.stopPropagation();deleteProject(p.id);}}
-                      style={{ background:"none", border:"none", color:"#6b7280", cursor:"pointer", fontSize:12, flexShrink:0, marginLeft:4 }}>✕</button>
-                  )}
+              <div key={p.id} onClick={()=>{setSelId(p.id);setFilter("all");setSelTask(null);}}
+                style={{ padding:"10px 16px", cursor:"pointer", background:selId===p.id?"#2d2d3f":"transparent", borderLeft:selId===p.id?`3px solid ${p.color}`:"3px solid transparent" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                  <div style={{ color:selId===p.id?"#fff":"#9ca3af", fontSize:12, fontWeight:600, marginBottom:4, flex:1, overflow:"hidden", textOverflow:"ellipsis", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{p.name}</div>
+                  {selId===p.id && <button onClick={e=>{e.stopPropagation();deleteProject(p.id);}} style={{ background:"none", border:"none", color:"#6b7280", cursor:"pointer", fontSize:12, flexShrink:0, marginLeft:4 }}>✕</button>}
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                  <div style={{ flex:1, height:4, background:"#374151", borderRadius:2 }}>
-                    <div style={{ width:`${pct}%`, height:"100%", background:p.color, borderRadius:2 }} />
-                  </div>
+                  <div style={{ flex:1, height:4, background:"#374151", borderRadius:2 }}><div style={{ width:`${pct}%`, height:"100%", background:p.color, borderRadius:2 }} /></div>
                   <span style={{ color:"#6b7280", fontSize:10 }}>{pct}%</span>
                 </div>
               </div>
@@ -204,19 +293,17 @@ function MainApp() {
       </div>
 
       {/* Main */}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", minWidth:0 }}>
         {/* Header */}
-        <div style={{ background:"#fff", padding:"14px 20px", borderBottom:"1px solid #e2e8f0", display:"flex", alignItems:"center", gap:12 }}>
+        <div style={{ background:"#fff", padding:"12px 20px", borderBottom:"1px solid #e2e8f0", display:"flex", alignItems:"center", gap:10 }}>
           <div style={{ width:10, height:10, borderRadius:"50%", background:proj.color, flexShrink:0 }} />
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontWeight:700, color:"#1e293b", fontSize:15, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{proj.name}</div>
+            <div style={{ fontWeight:700, color:"#1e293b", fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{proj.name}</div>
             {proj.tag && <div style={{ color:"#94a3b8", fontSize:11 }}>태그: {proj.tag}</div>}
           </div>
-          <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-            {["all","todo","doing","done"].map(s => (
-              <button key={s} onClick={()=>setFilter(s)}
-                style={{ padding:"4px 10px", borderRadius:20, border:"none", cursor:"pointer", fontSize:11, fontWeight:600,
-                  background:filter===s?proj.color:"#f1f5f9", color:filter===s?"#fff":"#64748b" }}>
+          <div style={{ display:"flex", gap:5, flexShrink:0 }}>
+            {["all","todo","doing","done"].map(s=>(
+              <button key={s} onClick={()=>setFilter(s)} style={{ padding:"4px 9px", borderRadius:20, border:"none", cursor:"pointer", fontSize:11, fontWeight:600, background:filter===s?proj.color:"#f1f5f9", color:filter===s?"#fff":"#64748b" }}>
                 {s==="all"?"전체":STATUS[s]}
               </button>
             ))}
@@ -224,71 +311,81 @@ function MainApp() {
         </div>
 
         {/* Stats */}
-        <div style={{ display:"flex", gap:10, padding:"12px 20px 0", flexWrap:"wrap" }}>
-          {[["전체",stats.total,"#6366f1"],["할 일",stats.todo,"#6b7280"],["진행 중",stats.doing,"#3b82f6"],["완료",stats.done,"#10b981"]].map(([l,v,c]) => (
-            <div key={l} style={{ background:"#fff", borderRadius:10, padding:"8px 16px", display:"flex", alignItems:"center", gap:8, boxShadow:"0 1px 3px rgba(0,0,0,.06)" }}>
-              <span style={{ fontSize:20, fontWeight:800, color:c }}>{v}</span>
+        <div style={{ display:"flex", gap:8, padding:"10px 16px 0", flexWrap:"wrap" }}>
+          {[["전체",stats.total,"#6366f1"],["할 일",stats.todo,"#6b7280"],["진행 중",stats.doing,"#3b82f6"],["완료",stats.done,"#10b981"]].map(([l,v,c])=>(
+            <div key={l} style={{ background:"#fff", borderRadius:10, padding:"6px 14px", display:"flex", alignItems:"center", gap:7, boxShadow:"0 1px 3px rgba(0,0,0,.06)" }}>
+              <span style={{ fontSize:18, fontWeight:800, color:c }}>{v}</span>
               <span style={{ color:"#94a3b8", fontSize:11 }}>{l}</span>
             </div>
           ))}
-          <button onClick={()=>setShowAdd(true)}
-            style={{ marginLeft:"auto", padding:"8px 14px", background:proj.color, color:"#fff", border:"none", borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:12 }}>
-            + 태스크 추가
-          </button>
+          <button onClick={()=>{setShowAdd(true);setSelTask(null);}} style={{ marginLeft:"auto", padding:"6px 12px", background:proj.color, color:"#fff", border:"none", borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:12 }}>+ 태스크 추가</button>
         </div>
 
         {/* Task List */}
-        <div style={{ flex:1, overflowY:"auto", padding:20 }}>
+        <div style={{ flex:1, overflowY:"auto", padding:16 }}>
           {showAdd && (
-            <div style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:12, border:`2px dashed ${proj.color}` }}>
+            <div style={{ background:"#fff", borderRadius:12, padding:14, marginBottom:10, border:`2px dashed ${proj.color}` }}>
               <div style={{ fontWeight:700, color:"#1e293b", marginBottom:10 }}>새 태스크</div>
               <input value={newTask.title} onChange={e=>setNewTask(n=>({...n,title:e.target.value}))}
                 placeholder="태스크 제목" onKeyDown={e=>e.key==="Enter"&&addTask()}
                 style={{ width:"100%", padding:"6px 10px", borderRadius:6, border:"1px solid #e2e8f0", marginBottom:8, fontSize:13, outline:"none" }} />
-              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                <select value={newTask.status} onChange={e=>setNewTask(n=>({...n,status:e.target.value}))} style={{ padding:"5px 8px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12 }}>
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                <select value={newTask.status} onChange={e=>setNewTask(n=>({...n,status:e.target.value}))} style={{ padding:"5px 7px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12 }}>
                   {Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
                 </select>
-                <select value={newTask.priority} onChange={e=>setNewTask(n=>({...n,priority:e.target.value}))} style={{ padding:"5px 8px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12 }}>
+                <select value={newTask.priority} onChange={e=>setNewTask(n=>({...n,priority:e.target.value}))} style={{ padding:"5px 7px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12 }}>
                   {Object.entries(PRIORITY).map(([k,v])=><option key={k} value={k}>{v}</option>)}
                 </select>
-                <input type="date" value={newTask.due} onChange={e=>setNewTask(n=>({...n,due:e.target.value}))} style={{ padding:"5px 8px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12 }} />
-                <input value={newTask.assignee} onChange={e=>setNewTask(n=>({...n,assignee:e.target.value}))} placeholder="담당자"
-                  style={{ padding:"5px 8px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12, width:90 }} />
-                <button onClick={addTask} style={{ padding:"5px 14px", background:proj.color, color:"#fff", border:"none", borderRadius:6, cursor:"pointer", fontWeight:600, fontSize:12 }}>저장</button>
-                <button onClick={()=>setShowAdd(false)} style={{ padding:"5px 10px", background:"#f1f5f9", color:"#64748b", border:"none", borderRadius:6, cursor:"pointer", fontSize:12 }}>취소</button>
+                <input type="date" value={newTask.due} onChange={e=>setNewTask(n=>({...n,due:e.target.value}))} style={{ padding:"5px 7px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12 }} />
+                <input value={newTask.assignee} onChange={e=>setNewTask(n=>({...n,assignee:e.target.value}))} placeholder="담당자" style={{ padding:"5px 7px", borderRadius:6, border:"1px solid #e2e8f0", fontSize:12, width:80 }} />
+                <button onClick={addTask} style={{ padding:"5px 12px", background:proj.color, color:"#fff", border:"none", borderRadius:6, cursor:"pointer", fontWeight:600, fontSize:12 }}>저장</button>
+                <button onClick={()=>setShowAdd(false)} style={{ padding:"5px 8px", background:"#f1f5f9", color:"#64748b", border:"none", borderRadius:6, cursor:"pointer", fontSize:12 }}>취소</button>
               </div>
             </div>
           )}
 
-          {filtered.length===0 && (
-            <div style={{ textAlign:"center", color:"#94a3b8", padding:60 }}>
-              <div style={{ fontSize:32, marginBottom:8 }}>📭</div>
-              태스크가 없습니다.
-            </div>
-          )}
+          {filtered.length===0 && <div style={{ textAlign:"center", color:"#94a3b8", padding:50 }}><div style={{ fontSize:28, marginBottom:8 }}>📭</div>태스크가 없습니다.</div>}
 
-          {filtered.map(t => (
-            <div key={t.id} style={{ background:"#fff", borderRadius:10, padding:"12px 16px", marginBottom:8,
-              boxShadow:"0 1px 3px rgba(0,0,0,.06)", display:"flex", alignItems:"center", gap:12, borderLeft:`4px solid ${SC[t.status]}` }}>
-              <div style={{ flex:1 }}>
-                <div style={{ fontWeight:600, color:"#1e293b", marginBottom:4,
-                  textDecoration:t.status==="done"?"line-through":"none", opacity:t.status==="done"?.5:1 }}>{t.title}</div>
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
-                  {t.assignee && <span style={{ fontSize:11, color:"#64748b" }}>👤 {t.assignee}</span>}
-                  {t.due && <span style={{ fontSize:11, color:"#64748b" }}>📅 {t.due}</span>}
-                  <span style={{ fontSize:10, padding:"1px 7px", borderRadius:20, background:PC[t.priority]+"20", color:PC[t.priority], fontWeight:700 }}>{PRIORITY[t.priority]}</span>
+          {filtered.map(t => {
+            const doneSub = t.subtasks.filter(s=>s.done).length;
+            const isSelected = selTask?.id===t.id;
+            return (
+              <div key={t.id} onClick={()=>setSelTask(isSelected?null:t)}
+                style={{ background:"#fff", borderRadius:10, padding:"11px 14px", marginBottom:7, boxShadow:isSelected?"0 0 0 2px "+proj.color:"0 1px 3px rgba(0,0,0,.06)",
+                  display:"flex", alignItems:"flex-start", gap:10, borderLeft:`4px solid ${SC[t.status]}`, cursor:"pointer" }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:600, color:"#1e293b", marginBottom:4, fontSize:13,
+                    textDecoration:t.status==="done"?"line-through":"none", opacity:t.status==="done"?.5:1 }}>{t.title}</div>
+                  <div style={{ display:"flex", gap:7, flexWrap:"wrap", alignItems:"center" }}>
+                    <span style={{ fontSize:10, padding:"1px 7px", borderRadius:20, background:PC[t.priority]+"20", color:PC[t.priority], fontWeight:700 }}>{PRIORITY[t.priority]}</span>
+                    <span style={{ fontSize:10, padding:"1px 7px", borderRadius:20, background:SC[t.status]+"15", color:SC[t.status], fontWeight:600 }}>{STATUS[t.status]}</span>
+                    {t.assignee && <span style={{ fontSize:11, color:"#64748b" }}>👤 {t.assignee}</span>}
+                    {t.due && <span style={{ fontSize:11, color:"#64748b" }}>📅 {t.due}</span>}
+                    {t.subtasks.length>0 && <span style={{ fontSize:11, color:"#94a3b8" }}>하위 {doneSub}/{t.subtasks.length}</span>}
+                    {t.detailLink && <span style={{ fontSize:11, color:proj.color }}>🔗 링크</span>}
+                  </div>
+                  {t.subtasks.length>0 && (
+                    <div style={{ marginTop:6, height:3, background:"#f1f5f9", borderRadius:2 }}>
+                      <div style={{ width:`${t.subtasks.length?doneSub/t.subtasks.length*100:0}%`, height:"100%", background:proj.color, borderRadius:2 }} />
+                    </div>
+                  )}
                 </div>
+                <button onClick={e=>{e.stopPropagation();deleteTask(t.id);}} style={{ background:"none", border:"none", cursor:"pointer", color:"#e2e8f0", fontSize:15, flexShrink:0, marginTop:1 }}>✕</button>
               </div>
-              <select value={t.status} onChange={e=>updateStatus(t.id,e.target.value)}
-                style={{ padding:"4px 8px", borderRadius:6, border:`1px solid ${SC[t.status]}`, color:SC[t.status], fontWeight:600, fontSize:11, background:SC[t.status]+"15", cursor:"pointer", flexShrink:0 }}>
-                {Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
-              </select>
-              <button onClick={()=>deleteTask(t.id)} style={{ background:"none", border:"none", cursor:"pointer", color:"#cbd5e1", fontSize:16, flexShrink:0 }}>✕</button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
+
+      {/* Detail Panel */}
+      {selTask && (
+        <DetailPanel
+          task={proj.tasks.find(t=>t.id===selTask.id) || selTask}
+          projColor={proj.color}
+          onClose={()=>setSelTask(null)}
+          onChange={updateTask}
+        />
+      )}
     </div>
   );
 }
