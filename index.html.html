@@ -36,7 +36,7 @@ const mkTask=t=>({detailLink:"",refLink:"",notes:"",submitter:"",subtasks:[],...
 
 const initProjects=[
   {id:1,name:"[창의재단] 기업연계 정보교원 역량강화",tag:"공동수급",color:"#6366f1",
-   period:"2025.06~2025.12",budget:"45,000,000",remark:"협력사 공동수급, 김종범 담당",
+   year:"2025",period:"2025.06~2025.12",budget:"45,000,000",remark:"협력사 공동수급, 김종범 담당",
    tasks:[
     mkTask({id:1,title:"협력사 수정 사업계획서 및 과업협상서 취합",status:"done",priority:"high",due:"2025-05-21",assignee:"교육컨설팅팀",submitter:"박혜미",subtasks:[{id:nid(),title:"협력사A 서류 취합",done:true},{id:nid(),title:"협력사B 서류 취합",done:true}]}),
     mkTask({id:2,title:"최종 검토 후 창의재단 전달",status:"done",priority:"high",due:"2025-05-22",assignee:"교육컨설팅팀",submitter:"박혜미"}),
@@ -46,13 +46,13 @@ const initProjects=[
     mkTask({id:6,title:"사전모집 설문 홍보",status:"done",priority:"mid",due:"2025-05-19",assignee:"교육컨설팅팀"}),
   ]},
   {id:2,name:"[KERIS] 중등 AI 교육 담당교원 역량강화",tag:"단독",color:"#0ea5e9",
-   period:"2025.07~2025.11",budget:"32,000,000",remark:"",
+   year:"2025",period:"2025.07~2025.11",budget:"32,000,000",remark:"",
    tasks:[
     mkTask({id:7,title:"운영 페이지 구성",status:"doing",priority:"mid",due:"",assignee:""}),
     mkTask({id:8,title:"연수 일정(안) 수립 - 단기인력",status:"todo",priority:"mid",due:"",assignee:""}),
   ]},
   {id:3,name:"[화성오산] AI 디지털 기반 블렌디드 연수",tag:"수의계약",color:"#f59e0b",
-   period:"2025.04~2025.08",budget:"18,500,000",remark:"집합일정 6/27(토)",
+   year:"2025",period:"2025.04~2025.08",budget:"18,500,000",remark:"집합일정 6/27(토)",
    tasks:[
     mkTask({id:9,title:"보조강사 선발 및 확정",status:"done",priority:"high",due:"2025-04-30",assignee:"권다솜/서혜빈"}),
     mkTask({id:10,title:"집필 파트 배분 (1차 회의)",status:"done",priority:"high",due:"2025-04-30",assignee:"권다솜/서혜빈"}),
@@ -62,14 +62,14 @@ const initProjects=[
     mkTask({id:14,title:"집합 연수 운영",status:"todo",priority:"high",due:"2025-06-27",assignee:"윤양호"}),
   ]},
   {id:4,name:"[인천교육청] 디지털 기반 교육혁신 교원역량강화",tag:"단독",color:"#10b981",
-   period:"2026.05~2026.12",budget:"56,000,000",remark:"",
+   year:"2026",period:"2026.05~2026.12",budget:"56,000,000",remark:"",
    tasks:[
     mkTask({id:15,title:"1차 초안 작성",status:"done",priority:"high",due:"2026-05-06",assignee:""}),
     mkTask({id:16,title:"제안서 제출",status:"done",priority:"high",due:"2026-05-08",assignee:""}),
     mkTask({id:17,title:"평가 대응",status:"done",priority:"high",due:"2026-05-20",assignee:""}),
   ]},
   {id:5,name:"[경기도교육청미래과학교육원] AI·디지털 기반 교육혁신",tag:"공동수급",color:"#ec4899",
-   period:"2026.06~2026.11",budget:"78,000,000",remark:"공동수급 분담이행방식",
+   year:"2026",period:"2026.06~2026.11",budget:"78,000,000",remark:"공동수급 분담이행방식",
    tasks:[
     mkTask({id:18,title:"사전규격 의견 검토 및 답변 대응",status:"done",priority:"high",due:"",assignee:""}),
     mkTask({id:19,title:"공동수급체 구성 준비",status:"doing",priority:"high",due:"",assignee:"",subtasks:[{id:nid(),title:"운수업체 파트너 선정",done:false},{id:nid(),title:"공동수급 계약서 준비",done:false}]}),
@@ -279,8 +279,12 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
           {f.refLink&&<a href={f.refLink} target="_blank" style={{fontSize:10,color:projColor,display:"block",marginTop:3}}>🔗 링크 열기</a>}
         </Row>
         <Row label="메모">
-          <textarea value={f.notes||""} onChange={e=>chg("notes",e.target.value)} onBlur={flush}
-            className="fi" placeholder="메모..." rows={3} style={{resize:"vertical",lineHeight:1.5}}/>
+          <textarea
+            key={taskId}
+            defaultValue={f.notes||""}
+            onBlur={e=>{const u={...fRef.current,notes:e.target.value};setF(u);onChange(u);}}
+            className="fi" placeholder="메모..." rows={3} style={{resize:"vertical",lineHeight:1.5}}
+          />
         </Row>
         {/* 하위 작업 */}
         <div style={{paddingTop:12}}>
@@ -380,7 +384,7 @@ function Dashboard({projects,onSelectProject,onUpdateProject}){
                 <div style={{padding:"14px 16px"}}>
                   {isEd?(
                     <div style={{display:"flex",flexDirection:"column",gap:7}}>
-                      {[["사업명","name"],["사업기간","period"],["사업비","budget"],["비고","remark"]].map(([label,key])=>(
+                      {[["사업명","name"],["사업년도","year"],["사업기간","period"],["사업비","budget"],["비고","remark"]].map(([label,key])=>(
                         <div key={key} style={{display:"flex",alignItems:"center",gap:8}}>
                           <span style={{width:50,fontSize:11,color:"#94a3b8",flexShrink:0}}>{label}</span>
                           <input value={editData[key]||""} onChange={e=>setEditData(d=>({...d,[key]:e.target.value}))} className="fi" style={{flex:1}}/>
@@ -390,7 +394,7 @@ function Dashboard({projects,onSelectProject,onUpdateProject}){
                   ):(
                     <>
                       <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
-                        {[["사업기간",p.period],["사업비",p.budget?p.budget+"원":""],["비고",p.remark]].map(([label,val])=>val?(
+                        {[["사업년도",p.year],["사업기간",p.period],["사업비",p.budget?p.budget+"원":""],["비고",p.remark]].map(([label,val])=>val?(
                           <div key={label} style={{display:"flex",gap:8}}>
                             <span style={{width:50,fontSize:11,color:"#94a3b8",flexShrink:0}}>{label}</span>
                             <span style={{fontSize:12,color:"#475569"}}>{val}</span>
@@ -431,7 +435,7 @@ function MainApp(){
   const [selTaskId,setSelTaskId]=useState(null); // ID만 보관 → 불필요한 re-render 방지
   const [showAdd,setShowAdd]=useState(false);
   const [showAddProj,setShowAddProj]=useState(false);
-  const [newProj,setNewProj]=useState({name:"",tag:"",color:"#6366f1",period:"",budget:"",remark:""});
+  const [newProj,setNewProj]=useState({name:"",tag:"",color:"#6366f1",year:"",period:"",budget:"",remark:""});
 
   const proj=view!=="dashboard"?projects.find(p=>p.id===view):null;
 
@@ -447,7 +451,7 @@ function MainApp(){
     const id=nid();
     setProjects(ps=>[...ps,{...newProj,id,tasks:[]}]);
     setView(id); setShowAddProj(false); setSelTaskId(null);
-    setNewProj({name:"",tag:"",color:"#6366f1",period:"",budget:"",remark:""});
+    setNewProj({name:"",tag:"",color:"#6366f1",year:"",period:"",budget:"",remark:""});
   };
   const deleteProject=id=>{
     if(!confirm("프로젝트를 삭제할까요?"))return;
@@ -489,7 +493,7 @@ function MainApp(){
         </div>
         {showAddProj&&(
           <div style={{padding:"8px 12px",background:"#16162a",borderBottom:"1px solid #2d2d3f"}}>
-            {[["프로젝트명","name"],["태그","tag"],["사업기간","period"],["사업비","budget"],["비고","remark"]].map(([ph,k])=>(
+            {[["프로젝트명","name"],["태그","tag"],["사업년도","year"],["사업기간","period"],["사업비","budget"],["비고","remark"]].map(([ph,k])=>(
               <input key={k} value={newProj[k]} onChange={e=>setNewProj(n=>({...n,[k]:e.target.value}))} placeholder={ph}
                 style={{width:"100%",padding:"4px 7px",borderRadius:5,border:"none",background:"#2d2d3f",color:"#fff",fontSize:11,marginBottom:5,outline:"none"}}/>
             ))}
