@@ -19,25 +19,28 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 const APP_PASSWORD = "dustn2026";
-const STORAGE_KEY  = "pm_data_v1";
+const STORAGE_KEY  = "pm_data_v2";
 const STATUS   = {todo:"할 일",doing:"진행 중",done:"완료"};
 const PRIORITY  = {high:"높음",mid:"중간",low:"낮음"};
-const PC={high:"#ef4444",mid:"#f59e0b",low:"#22c55e"};
-const SC={todo:"#6b7280",doing:"#3b82f6",done:"#10b981"};
-const PRI_ORDER={high:0,mid:1,low:2};
-const COLORS=["#6366f1","#0ea5e9","#f59e0b","#10b981","#ec4899","#8b5cf6","#f97316"];
-const INIT_MEMBERS=["박혜미","권다솜","서혜빈","윤양호","최다영","교육컨설팅팀","전체"];
+const PC = {high:"#ef4444",mid:"#f59e0b",low:"#22c55e"};
+const SC = {todo:"#6b7280",doing:"#3b82f6",done:"#10b981"};
+const PRI_ORDER = {high:0,mid:1,low:2};
+const COLORS = ["#6366f1","#0ea5e9","#f59e0b","#10b981","#ec4899","#8b5cf6","#f97316"];
+const INIT_MEMBERS = ["박혜미","권다솜","서혜빈","윤양호","최다영","교육컨설팅팀","전체"];
+const MONTHS_KR = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+const DAYS_KR   = ["일","월","화","수","목","금","토"];
 
-let uid=300;
-const nid=()=>++uid;
-const mkTask=t=>({detailLink:"",refLink:"",notes:"",submitter:"",subtasks:[],...t});
+let uid = 300;
+const nid = () => ++uid;
+const mkTask = t => ({detailLink:"",refLink:"",notes:"",submitter:"",subtasks:[],...t});
+const pad2 = n => String(n).padStart(2,"0");
 
-const DEFAULT_PROJECTS=[
+const DEFAULT_PROJECTS = [
   {id:1,name:"[창의재단] 기업연계 정보교원 역량강화",tag:"공동수급",color:"#6366f1",
-   year:"2026",period:"2026.06~2026.12",budget:"45,000,000",remark:"협력사 공동수급, 김종범 담당",
+   year:"2026",period:"2026.06~2026.12",budget:"400,000,000",remark:"(주관)아이스크림미디어 (협력)라이브데이터,크라우드웍스",
    tasks:[
     mkTask({id:1,title:"협력사 수정 사업계획서 및 과업협상서 취합",status:"done",priority:"high",due:"2026-05-21",assignee:"교육컨설팅팀",submitter:"박혜미",subtasks:[{id:nid(),title:"협력사A 서류 취합",done:true},{id:nid(),title:"협력사B 서류 취합",done:true}]}),
     mkTask({id:2,title:"최종 검토 후 창의재단 전달",status:"done",priority:"high",due:"2026-05-22",assignee:"교육컨설팅팀",submitter:"박혜미"}),
@@ -49,8 +52,8 @@ const DEFAULT_PROJECTS=[
   {id:2,name:"[KERIS] 중등 AI 교육 담당교원 역량강화",tag:"단독",color:"#0ea5e9",
    year:"2026",period:"2026.07~2026.11",budget:"32,000,000",remark:"",
    tasks:[
-    mkTask({id:7,title:"운영 페이지 구성",status:"doing",priority:"mid",due:"",assignee:""}),
-    mkTask({id:8,title:"연수 일정(안) 수립 - 단기인력",status:"todo",priority:"mid",due:"",assignee:""}),
+    mkTask({id:7,title:"운영 페이지 구성",status:"doing",priority:"mid",due:"2026-07-15",assignee:""}),
+    mkTask({id:8,title:"연수 일정(안) 수립 - 단기인력",status:"todo",priority:"mid",due:"2026-07-31",assignee:""}),
   ]},
   {id:3,name:"[화성오산] AI 디지털 기반 블렌디드 연수",tag:"수의계약",color:"#f59e0b",
    year:"2026",period:"2026.04~2026.08",budget:"18,500,000",remark:"집합일정 6/27(토)",
@@ -69,22 +72,11 @@ const DEFAULT_PROJECTS=[
     mkTask({id:16,title:"제안서 제출",status:"done",priority:"high",due:"2026-05-08",assignee:""}),
     mkTask({id:17,title:"평가 대응",status:"done",priority:"high",due:"2026-05-20",assignee:""}),
   ]},
-  {id:5,name:"[경기도교육청미래과학교육원] AI·디지털 기반 교육혁신",tag:"공동수급",color:"#ec4899",
-   year:"2026",period:"2026.06~2026.11",budget:"78,000,000",remark:"공동수급 분담이행방식",
-   tasks:[
-    mkTask({id:18,title:"사전규격 의견 검토 및 답변 대응",status:"done",priority:"high",due:"",assignee:""}),
-    mkTask({id:19,title:"공동수급체 구성 준비",status:"doing",priority:"high",due:"",assignee:"",subtasks:[{id:nid(),title:"운수업체 파트너 선정",done:false},{id:nid(),title:"공동수급 계약서 준비",done:false}]}),
-    mkTask({id:20,title:"입찰 참여 준비",status:"todo",priority:"mid",due:"",assignee:""}),
-  ]},
+
 ];
 
-/* ── localStorage 헬퍼 ── */
-function loadStorage(){
-  try{ const d=localStorage.getItem(STORAGE_KEY); return d?JSON.parse(d):null; }catch(e){return null;}
-}
-function saveStorage(data){
-  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(data)); }catch(e){}
-}
+function loadStorage(){try{const d=localStorage.getItem(STORAGE_KEY);return d?JSON.parse(d):null;}catch(e){return null;}}
+function saveStorage(data){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}catch(e){}}
 
 /* ── 비밀번호 ── */
 function PasswordGate({onAuth}){
@@ -98,9 +90,8 @@ function PasswordGate({onAuth}){
           <div style={{fontWeight:800,fontSize:18,color:"#1e293b"}}>팀 전용 접근</div>
           <div style={{color:"#94a3b8",fontSize:13,marginTop:4}}>비밀번호를 입력하세요</div>
         </div>
-        <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}}
-          onKeyDown={e=>e.key==="Enter"&&go()} placeholder="비밀번호" autoFocus
-          style={{width:"100%",padding:"11px 14px",borderRadius:8,border:err?"2px solid #ef4444":"1px solid #e2e8f0",fontSize:14,outline:"none",marginBottom:8}}/>
+        <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&go()}
+          placeholder="비밀번호" autoFocus style={{width:"100%",padding:"11px 14px",borderRadius:8,border:err?"2px solid #ef4444":"1px solid #e2e8f0",fontSize:14,outline:"none",marginBottom:8}}/>
         {err&&<div style={{color:"#ef4444",fontSize:12,marginBottom:8}}>비밀번호가 올바르지 않습니다.</div>}
         <button onClick={go} style={{width:"100%",padding:11,background:"linear-gradient(135deg,#6366f1,#a855f7)",color:"#fff",border:"none",borderRadius:8,fontWeight:700,fontSize:14,cursor:"pointer"}}>입장하기</button>
       </div>
@@ -121,7 +112,7 @@ function MemberSelect({value,onChange,members,onAddMember,onDeleteMember}){
         <span style={{fontSize:11,fontWeight:700,color:"#64748b"}}>멤버 목록 관리</span>
         <button onClick={()=>setMode("normal")} style={{background:"none",border:"none",color:"#94a3b8",cursor:"pointer",fontSize:13}}>✕</button>
       </div>
-      <div style={{maxHeight:130,overflowY:"auto"}}>
+      <div style={{maxHeight:120,overflowY:"auto"}}>
         {members.map(m=>(
           <div key={m} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 6px",borderRadius:5,background:"#fff",marginBottom:3,border:"1px solid #f1f5f9"}}>
             <span style={{fontSize:12,color:"#1e293b"}}>{m}</span>
@@ -130,16 +121,14 @@ function MemberSelect({value,onChange,members,onAddMember,onDeleteMember}){
         ))}
       </div>
       <div style={{display:"flex",gap:5,marginTop:6}}>
-        <input ref={inputRef} value={newName} onChange={e=>setNewName(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&doAdd()} placeholder="새 이름 추가" className="fi" style={{flex:1,fontSize:11}}/>
+        <input ref={inputRef} value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doAdd()} placeholder="새 이름" className="fi" style={{flex:1,fontSize:11}}/>
         <button onClick={doAdd} style={{padding:"3px 8px",background:"#6366f1",color:"#fff",border:"none",borderRadius:5,cursor:"pointer",fontSize:11,fontWeight:700}}>추가</button>
       </div>
     </div>
   );
   if(mode==="add") return(
     <div style={{display:"flex",gap:5}}>
-      <input ref={inputRef} value={newName} onChange={e=>setNewName(e.target.value)}
-        onKeyDown={e=>e.key==="Enter"&&doAdd()} placeholder="이름 입력" className="fi" style={{flex:1}}/>
+      <input ref={inputRef} value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doAdd()} placeholder="이름 입력" className="fi" style={{flex:1}}/>
       <button onClick={doAdd} style={{padding:"4px 9px",background:"#6366f1",color:"#fff",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:700}}>확인</button>
       <button onClick={()=>setMode("normal")} style={{padding:"4px 7px",background:"#f1f5f9",color:"#64748b",border:"none",borderRadius:6,cursor:"pointer",fontSize:11}}>취소</button>
     </div>
@@ -150,8 +139,8 @@ function MemberSelect({value,onChange,members,onAddMember,onDeleteMember}){
         <option value="">선택 안함</option>
         {members.map(m=><option key={m} value={m}>{m}</option>)}
       </select>
-      <button onClick={()=>setMode("add")} title="이름 추가" style={{padding:"4px 7px",background:"#f1f5f9",color:"#6366f1",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:700}}>+</button>
-      <button onClick={()=>setMode("manage")} title="목록 관리" style={{padding:"4px 7px",background:"#f1f5f9",color:"#94a3b8",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:12}}>⚙️</button>
+      <button onClick={()=>setMode("add")} style={{padding:"4px 7px",background:"#f1f5f9",color:"#6366f1",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:700}}>+</button>
+      <button onClick={()=>setMode("manage")} style={{padding:"4px 7px",background:"#f1f5f9",color:"#94a3b8",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:12}}>⚙️</button>
     </div>
   );
 }
@@ -191,91 +180,53 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
   const [f,setF]=useState(task||{});
   const [dirty,setDirty]=useState(false);
   const [newSub,setNewSub]=useState("");
-
-  // 다른 태스크 전환 시만 초기화
   const prevId=useRef(taskId);
-  if(prevId.current!==taskId){
-    prevId.current=taskId;
-    setF(task||{});
-    setDirty(false);
-  }
-
-  // fRef: 저장 시 최신 f를 읽기 위해
-  const fRef=useRef(f);
-  fRef.current=f;
-
-  // memoRef: textarea DOM을 직접 참조 → React 상태와 완전 분리
+  if(prevId.current!==taskId){prevId.current=taskId;setF(task||{});setDirty(false);}
+  const fRef=useRef(f); fRef.current=f;
   const memoRef=useRef(null);
-
-  // 태스크 전환 시 메모 textarea 값 리셋
-  useEffect(()=>{
-    if(memoRef.current) memoRef.current.value=task?.notes||"";
-  },[taskId]);
-
+  useEffect(()=>{if(memoRef.current)memoRef.current.value=task?.notes||"";},[taskId]);
   if(!task)return null;
-
-  // 메모 외 필드 변경
   const chg=useCallback((k,v)=>{setF(x=>({...x,[k]:v}));setDirty(true);},[]);
-
-  // 저장: f의 모든 필드 + 메모 DOM 값을 합쳐서 부모에 반영
   const save=useCallback(()=>{
     const notes=memoRef.current?memoRef.current.value:(fRef.current.notes||"");
-    const updated={...fRef.current,notes};
-    onChange(updated);
-    setDirty(false);
+    onChange({...fRef.current,notes});setDirty(false);
   },[onChange]);
-
-  // 하위 작업은 즉시 반영
   const toggleSub=sid=>{const u={...f,subtasks:f.subtasks.map(s=>s.id===sid?{...s,done:!s.done}:s)};setF(u);onChange(u);};
   const addSub=()=>{if(!newSub.trim())return;const u={...f,subtasks:[...f.subtasks,{id:nid(),title:newSub.trim(),done:false}]};setF(u);onChange(u);setNewSub("");};
   const delSub=sid=>{const u={...f,subtasks:f.subtasks.filter(s=>s.id!==sid)};setF(u);onChange(u);};
   const doneCount=f.subtasks?.filter(s=>s.done).length||0;
-
   const Row=({label,children})=>(
     <div style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 0",borderBottom:"1px solid #f8fafc"}}>
       <div style={{width:72,color:"#94a3b8",fontSize:11,paddingTop:5,flexShrink:0}}>{label}</div>
       <div style={{flex:1}}>{children}</div>
     </div>
   );
-
   return(
     <div style={{width:320,background:"#fff",borderLeft:"1px solid #e2e8f0",display:"flex",flexDirection:"column",overflow:"hidden",flexShrink:0}}>
       <div style={{padding:"11px 14px",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",gap:8}}>
         <div style={{flex:1,fontWeight:700,color:"#1e293b",fontSize:13,lineHeight:1.4}}>{f.title}</div>
-        <button onClick={save}
-          style={{padding:"4px 13px",background:dirty?"#6366f1":"#f1f5f9",color:dirty?"#fff":"#94a3b8",
-            border:"none",borderRadius:6,cursor:dirty?"pointer":"default",fontSize:11,fontWeight:700,transition:"all .15s",flexShrink:0}}>
+        <button onClick={save} style={{padding:"4px 13px",background:dirty?"#6366f1":"#f1f5f9",color:dirty?"#fff":"#94a3b8",border:"none",borderRadius:6,cursor:dirty?"pointer":"default",fontSize:11,fontWeight:700,transition:"all .15s",flexShrink:0}}>
           {dirty?"💾 저장":"저장됨"}
         </button>
         <button onClick={onClose} style={{background:"none",border:"none",color:"#94a3b8",cursor:"pointer",fontSize:17}}>✕</button>
       </div>
-
       <div style={{flex:1,overflowY:"auto",padding:"0 14px 16px"}}>
         <div style={{padding:"10px 0",borderBottom:"1px solid #f8fafc"}}>
           <button onClick={()=>chg("status",f.status==="done"?"todo":"done")}
-            style={{padding:"5px 12px",borderRadius:7,border:`1px solid ${f.status==="done"?"#10b981":"#e2e8f0"}`,
-              background:f.status==="done"?"#d1fae5":"#f8fafc",color:f.status==="done"?"#10b981":"#64748b",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+            style={{padding:"5px 12px",borderRadius:7,border:`1px solid ${f.status==="done"?"#10b981":"#e2e8f0"}`,background:f.status==="done"?"#d1fae5":"#f8fafc",color:f.status==="done"?"#10b981":"#64748b",fontSize:11,fontWeight:700,cursor:"pointer"}}>
             {f.status==="done"?"✅ 완료됨":"○ 완료로 표시"}
           </button>
         </div>
-        <Row label="담당자">
-          <MemberSelect value={f.assignee} onChange={v=>chg("assignee",v)} members={members} onAddMember={onAddMember} onDeleteMember={onDeleteMember}/>
-        </Row>
+        <Row label="담당자"><MemberSelect value={f.assignee} onChange={v=>chg("assignee",v)} members={members} onAddMember={onAddMember} onDeleteMember={onDeleteMember}/></Row>
         <Row label="우선순위">
-          <select value={f.priority} onChange={e=>chg("priority",e.target.value)} className="fi"
-            style={{color:PC[f.priority],fontWeight:700,background:PC[f.priority]+"15",border:`1px solid ${PC[f.priority]}40`}}>
+          <select value={f.priority} onChange={e=>chg("priority",e.target.value)} className="fi" style={{color:PC[f.priority],fontWeight:700,background:PC[f.priority]+"15",border:`1px solid ${PC[f.priority]}40`}}>
             {Object.entries(PRIORITY).map(([k,v])=><option key={k} value={k}>{v}</option>)}
           </select>
         </Row>
-        <Row label="제출한 사람">
-          <MemberSelect value={f.submitter} onChange={v=>chg("submitter",v)} members={members} onAddMember={onAddMember} onDeleteMember={onDeleteMember}/>
-        </Row>
-        <Row label="기한">
-          <input type="date" value={f.due||""} onChange={e=>chg("due",e.target.value)} className="fi"/>
-        </Row>
+        <Row label="제출한 사람"><MemberSelect value={f.submitter} onChange={v=>chg("submitter",v)} members={members} onAddMember={onAddMember} onDeleteMember={onDeleteMember}/></Row>
+        <Row label="기한"><input type="date" value={f.due||""} onChange={e=>chg("due",e.target.value)} className="fi"/></Row>
         <Row label="상태">
-          <select value={f.status} onChange={e=>chg("status",e.target.value)} className="fi"
-            style={{color:SC[f.status],fontWeight:700,background:SC[f.status]+"15",border:`1px solid ${SC[f.status]}40`}}>
+          <select value={f.status} onChange={e=>chg("status",e.target.value)} className="fi" style={{color:SC[f.status],fontWeight:700,background:SC[f.status]+"15",border:`1px solid ${SC[f.status]}40`}}>
             {Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
           </select>
         </Row>
@@ -287,19 +238,10 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
           <input value={f.refLink||""} onChange={e=>chg("refLink",e.target.value)} className="fi" placeholder="https://"/>
           {f.refLink&&<a href={f.refLink} target="_blank" style={{fontSize:10,color:projColor,display:"block",marginTop:3}}>🔗 링크 열기</a>}
         </Row>
-
-        {/* 메모: DOM ref로 완전 분리 — React 상태 업데이트 없음 → 커서 안 사라짐 */}
         <Row label="메모">
-          <textarea
-            ref={memoRef}
-            defaultValue={f.notes||""}
-            onChange={()=>setDirty(true)}
-            className="fi" placeholder="메모..." rows={3}
-            style={{resize:"vertical",lineHeight:1.5}}
-          />
+          <textarea ref={memoRef} defaultValue={f.notes||""} onChange={()=>setDirty(true)}
+            className="fi" placeholder="메모..." rows={3} style={{resize:"vertical",lineHeight:1.5}}/>
         </Row>
-
-        {/* 하위 작업 */}
         <div style={{paddingTop:12}}>
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
             <span style={{fontWeight:700,color:"#1e293b",fontSize:12}}>하위 작업</span>
@@ -309,9 +251,7 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
             <div style={{background:"#f8fafc",borderRadius:8,padding:"3px 0",marginBottom:7}}>
               {f.subtasks.map(s=>(
                 <div key={s.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 10px"}}>
-                  <div onClick={()=>toggleSub(s.id)}
-                    style={{width:17,height:17,borderRadius:"50%",border:s.done?"none":`2px solid #cbd5e1`,
-                      background:s.done?projColor:"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
+                  <div onClick={()=>toggleSub(s.id)} style={{width:17,height:17,borderRadius:"50%",border:s.done?"none":`2px solid #cbd5e1`,background:s.done?projColor:"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
                     {s.done&&<span style={{color:"#fff",fontSize:9,fontWeight:900}}>✓</span>}
                   </div>
                   <span style={{flex:1,fontSize:12,color:s.done?"#94a3b8":"#1e293b",textDecoration:s.done?"line-through":"none"}}>{s.title}</span>
@@ -321,22 +261,178 @@ function DetailPanel({taskId,projTasks,projColor,onClose,onChange,members,onAddM
             </div>
           )}
           <div style={{display:"flex",gap:5}}>
-            <input value={newSub} onChange={e=>setNewSub(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addSub()}
-              placeholder="+ 하위 작업 추가" className="fi" style={{flex:1}}/>
+            <input value={newSub} onChange={e=>setNewSub(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addSub()} placeholder="+ 하위 작업 추가" className="fi" style={{flex:1}}/>
             <button onClick={addSub} style={{padding:"5px 10px",background:projColor,color:"#fff",border:"none",borderRadius:6,cursor:"pointer",fontSize:12,fontWeight:700}}>+</button>
           </div>
         </div>
+        {dirty&&<div style={{marginTop:12,padding:"8px 12px",background:"#fef3c7",borderRadius:8,fontSize:11,color:"#92400e"}}>⚠️ 미저장 변경사항이 있습니다. 상단 <b>💾 저장</b>을 눌러주세요.</div>}
+      </div>
+    </div>
+  );
+}
 
-        {dirty&&<div style={{marginTop:12,padding:"8px 12px",background:"#fef3c7",borderRadius:8,fontSize:11,color:"#92400e"}}>
-          ⚠️ 미저장 변경사항이 있습니다. 상단 <b>💾 저장</b>을 눌러주세요.
-        </div>}
+/* ══════════════════════════════
+   📅 캘린더 공통 그리드
+══════════════════════════════ */
+function CalendarMonth({year,month,tasksByDate,onPrev,onNext,compact=false}){
+  const firstDay = new Date(year,month,1).getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
+  const cells = [...Array(firstDay).fill(null), ...Array.from({length:daysInMonth},(_,i)=>i+1)];
+  while(cells.length%7!==0) cells.push(null);
+  const todayStr = new Date().toISOString().slice(0,10);
+  const cellH = compact ? 70 : 90;
+  return(
+    <div>
+      {/* 월 네비 */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16,marginBottom:14}}>
+        <button onClick={onPrev} style={{background:"#f1f5f9",border:"none",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,color:"#64748b",display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+        <span style={{fontWeight:800,fontSize:16,color:"#1e293b",minWidth:110,textAlign:"center"}}>{year}년 {MONTHS_KR[month]}</span>
+        <button onClick={onNext} style={{background:"#f1f5f9",border:"none",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,color:"#64748b",display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+      </div>
+      {/* 요일 헤더 */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:1}}>
+        {DAYS_KR.map((d,i)=>(
+          <div key={d} style={{textAlign:"center",padding:"6px 0",fontSize:11,fontWeight:700,color:i===0?"#ef4444":i===6?"#3b82f6":"#94a3b8"}}>{d}</div>
+        ))}
+      </div>
+      {/* 날짜 셀 */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1}}>
+        {cells.map((day,i)=>{
+          const dateStr = day ? `${year}-${pad2(month+1)}-${pad2(day)}` : null;
+          const tasks   = dateStr ? (tasksByDate[dateStr]||[]) : [];
+          const isToday = dateStr===todayStr;
+          const isSun   = i%7===0, isSat = i%7===6;
+          return(
+            <div key={i} style={{minHeight:cellH,border:"1px solid #f1f5f9",padding:"4px 3px",background:isToday?"#eef2ff":"#fff",opacity:!day?.4:1}}>
+              {day&&(
+                <>
+                  <div style={{width:22,height:22,borderRadius:"50%",background:isToday?"#6366f1":"transparent",color:isToday?"#fff":isSun?"#ef4444":isSat?"#3b82f6":"#374151",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:isToday?700:400,marginBottom:2}}>{day}</div>
+                  {tasks.slice(0,compact?2:3).map((t,ti)=>(
+                    <div key={ti} title={t.title} style={{background:t.projColor+(t.status==="done"?"55":"cc"),color:"#fff",fontSize:9,padding:"1px 4px",borderRadius:3,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1.5}}>
+                      {t.title}
+                    </div>
+                  ))}
+                  {tasks.length>(compact?2:3)&&<div style={{fontSize:9,color:"#94a3b8",marginTop:1}}>+{tasks.length-(compact?2:3)}개</div>}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── 다가오는 마감 위젯 ── */
+function UpcomingDeadlines({projects,onViewCalendar}){
+  const [days,setDays]=useState(7);
+  const upcoming=useMemo(()=>{
+    const today=new Date(); today.setHours(0,0,0,0);
+    const end=new Date(today); end.setDate(end.getDate()+days);
+    const list=[];
+    projects.forEach(p=>p.tasks.forEach(t=>{
+      if(t.due&&t.status!=="done"){
+        const due=new Date(t.due);
+        if(due>=today&&due<=end){
+          const diff=Math.round((due-today)/864e5);
+          list.push({...t,projName:p.name,projColor:p.color,diff});
+        }
+      }
+    }));
+    return list.sort((a,b)=>a.diff-b.diff);
+  },[projects,days]);
+
+  return(
+    <div style={{background:"#fff",borderRadius:12,padding:"14px 16px",marginBottom:20,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+        <span style={{fontWeight:700,color:"#1e293b",fontSize:14}}>📌 다가오는 마감</span>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          {[7,14].map(d=>(
+            <button key={d} onClick={()=>setDays(d)} style={{padding:"3px 9px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,background:days===d?"#6366f1":"#f1f5f9",color:days===d?"#fff":"#64748b"}}>{d}일</button>
+          ))}
+          <button onClick={onViewCalendar} style={{padding:"3px 10px",borderRadius:20,border:"1px solid #e2e8f0",cursor:"pointer",fontSize:11,color:"#6366f1",background:"#fff",fontWeight:600}}>전체 보기 →</button>
+        </div>
+      </div>
+      {upcoming.length===0?(
+        <div style={{color:"#94a3b8",fontSize:12,textAlign:"center",padding:"12px 0"}}>향후 {days}일 내 마감 예정 태스크가 없습니다.</div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:6}}>
+          {upcoming.map((t,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:8,background:"#f8fafc",borderLeft:`3px solid ${t.projColor}`}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:12,fontWeight:600,color:"#1e293b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
+                <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>{t.projName.replace(/\[.*?\]\s*/,"")}</div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontSize:11,fontWeight:800,color:t.diff===0?"#ef4444":t.diff<=3?"#ef4444":t.diff<=7?"#f59e0b":"#64748b"}}>
+                  {t.diff===0?"D-Day":`D-${t.diff}`}
+                </div>
+                <div style={{fontSize:10,color:"#94a3b8"}}>{t.due}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── 전체 캘린더 페이지 ── */
+function GlobalCalendar({projects}){
+  const now=new Date();
+  const [year,setYear]=useState(now.getFullYear());
+  const [month,setMonth]=useState(now.getMonth());
+  const tasksByDate=useMemo(()=>{
+    const map={};
+    projects.forEach(p=>p.tasks.forEach(t=>{
+      if(t.due){if(!map[t.due])map[t.due]=[];map[t.due].push({...t,projColor:p.color});}
+    }));
+    return map;
+  },[projects]);
+  const prevM=()=>{if(month===0){setYear(y=>y-1);setMonth(11);}else setMonth(m=>m-1);};
+  const nextM=()=>{if(month===11){setYear(y=>y+1);setMonth(0);}else setMonth(m=>m+1);};
+  return(
+    <div style={{flex:1,overflowY:"auto",background:"#f1f5f9",padding:24}}>
+      <div style={{fontWeight:800,color:"#1e293b",fontSize:18,marginBottom:16}}>📅 전체 캘린더</div>
+      {/* 프로젝트 범례 */}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+        {projects.map(p=>(
+          <div key={p.id} style={{display:"flex",alignItems:"center",gap:5,background:"#fff",padding:"4px 10px",borderRadius:20,boxShadow:"0 1px 3px rgba(0,0,0,.06)"}}>
+            <div style={{width:9,height:9,borderRadius:2,background:p.color,flexShrink:0}}/>
+            <span style={{fontSize:11,color:"#64748b"}}>{p.name.replace(/\[.*?\]\s*/,"")}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{background:"#fff",borderRadius:16,padding:20,boxShadow:"0 2px 8px rgba(0,0,0,.07)"}}>
+        <CalendarMonth year={year} month={month} tasksByDate={tasksByDate} onPrev={prevM} onNext={nextM}/>
+      </div>
+    </div>
+  );
+}
+
+/* ── 프로젝트 캘린더 탭 ── */
+function ProjectCalendarView({proj}){
+  const now=new Date();
+  const [year,setYear]=useState(now.getFullYear());
+  const [month,setMonth]=useState(now.getMonth());
+  const tasksByDate=useMemo(()=>{
+    const map={};
+    proj.tasks.forEach(t=>{if(t.due){if(!map[t.due])map[t.due]=[];map[t.due].push({...t,projColor:proj.color});}});
+    return map;
+  },[proj.tasks,proj.color]);
+  const prevM=()=>{if(month===0){setYear(y=>y-1);setMonth(11);}else setMonth(m=>m-1);};
+  const nextM=()=>{if(month===11){setYear(y=>y+1);setMonth(0);}else setMonth(m=>m+1);};
+  return(
+    <div style={{flex:1,overflowY:"auto",padding:14}}>
+      <div style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 1px 3px rgba(0,0,0,.06)"}}>
+        <CalendarMonth year={year} month={month} tasksByDate={tasksByDate} onPrev={prevM} onNext={nextM} compact={true}/>
       </div>
     </div>
   );
 }
 
 /* ── 대시보드 ── */
-function Dashboard({projects,onSelectProject,onUpdateProject}){
+function Dashboard({projects,onSelectProject,onUpdateProject,onViewCalendar}){
   const [editId,setEditId]=useState(null);
   const [editData,setEditData]=useState({});
   const totalTasks=projects.reduce((a,p)=>a+p.tasks.length,0);
@@ -348,6 +444,7 @@ function Dashboard({projects,onSelectProject,onUpdateProject}){
   const saveEdit=()=>{onUpdateProject(editId,editData);setEditId(null);};
   return(
     <div style={{flex:1,overflowY:"auto",background:"#f1f5f9"}}>
+      {/* 상단 통계 */}
       <div style={{background:"linear-gradient(135deg,#1e1e2e,#2d2d3f)",padding:"28px 28px 24px"}}>
         <div style={{color:"#a78bfa",fontSize:12,fontWeight:700,letterSpacing:1,marginBottom:6}}>OVERVIEW</div>
         <div style={{color:"#fff",fontSize:22,fontWeight:800,marginBottom:20}}>전체 프로젝트 현황</div>
@@ -366,7 +463,12 @@ function Dashboard({projects,onSelectProject,onUpdateProject}){
           )}
         </div>
       </div>
+
       <div style={{padding:24}}>
+        {/* ① 다가오는 마감 위젯 */}
+        <UpcomingDeadlines projects={projects} onViewCalendar={onViewCalendar}/>
+
+        {/* ② 프로젝트 카드 */}
         <div style={{fontWeight:700,color:"#1e293b",fontSize:15,marginBottom:16}}>프로젝트 목록</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:16}}>
           {projects.map(p=>{
@@ -386,8 +488,7 @@ function Dashboard({projects,onSelectProject,onUpdateProject}){
                       </div>
                       <div style={{color:"#fff",fontWeight:700,fontSize:13,lineHeight:1.4}}>{p.name}</div>
                     </div>
-                    <button onClick={e=>{e.stopPropagation();isEd?saveEdit():startEdit(p);}}
-                      style={{background:"rgba(255,255,255,.2)",border:"none",color:"#fff",borderRadius:6,padding:"3px 8px",fontSize:11,cursor:"pointer",fontWeight:600,flexShrink:0,marginLeft:8}}>
+                    <button onClick={e=>{e.stopPropagation();isEd?saveEdit():startEdit(p);}} style={{background:"rgba(255,255,255,.2)",border:"none",color:"#fff",borderRadius:6,padding:"3px 8px",fontSize:11,cursor:"pointer",fontWeight:600,flexShrink:0,marginLeft:8}}>
                       {isEd?"저장":"✏️ 편집"}
                     </button>
                   </div>
@@ -429,8 +530,7 @@ function Dashboard({projects,onSelectProject,onUpdateProject}){
                           </div>
                         ))}
                       </div>
-                      <button onClick={()=>onSelectProject(p.id)}
-                        style={{width:"100%",padding:"8px 0",background:p.color+"15",color:p.color,border:`1px solid ${p.color}30`,borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer"}}>
+                      <button onClick={()=>onSelectProject(p.id)} style={{width:"100%",padding:"8px 0",background:p.color+"15",color:p.color,border:`1px solid ${p.color}30`,borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer"}}>
                         태스크 보기 →
                       </button>
                     </>
@@ -445,13 +545,15 @@ function Dashboard({projects,onSelectProject,onUpdateProject}){
   );
 }
 
-/* ── 메인 ── */
+/* ══════════════════════════════
+   🏠 메인 앱
+══════════════════════════════ */
 function MainApp(){
-  // localStorage에서 초기값 로드
   const saved=loadStorage();
   const [projects,setProjects]=useState(saved?.projects||DEFAULT_PROJECTS);
   const [members,setMembers]=useState(saved?.members||INIT_MEMBERS);
-  const [view,setView]=useState("dashboard");
+  const [view,setView]=useState("dashboard"); // "dashboard" | "calendar" | projId
+  const [projTab,setProjTab]=useState("list"); // "list" | "calendar"
   const [filter,setFilter]=useState("all");
   const [sort,setSort]=useState("default");
   const [selTaskId,setSelTaskId]=useState(null);
@@ -459,10 +561,9 @@ function MainApp(){
   const [showAddProj,setShowAddProj]=useState(false);
   const [newProj,setNewProj]=useState({name:"",tag:"",color:"#6366f1",year:"",period:"",budget:"",remark:""});
 
-  // projects 또는 members 변경 시 localStorage에 자동 저장
-  useEffect(()=>{ saveStorage({projects,members}); },[projects,members]);
+  useEffect(()=>{saveStorage({projects,members});},[projects,members]);
 
-  const proj=view!=="dashboard"?projects.find(p=>p.id===view):null;
+  const proj=view!=="dashboard"&&view!=="calendar"?projects.find(p=>p.id===view):null;
   const addMember=n=>setMembers(m=>m.includes(n)?m:[...m,n]);
   const deleteMember=n=>setMembers(m=>m.filter(x=>x!==n));
   const updateProjInfo=(id,data)=>setProjects(ps=>ps.map(p=>p.id!==id?p:{...p,...data}));
@@ -473,7 +574,7 @@ function MainApp(){
     if(!newProj.name.trim())return;
     const id=nid();
     setProjects(ps=>[...ps,{...newProj,id,tasks:[]}]);
-    setView(id);setShowAddProj(false);setSelTaskId(null);
+    setView(id);setShowAddProj(false);setSelTaskId(null);setProjTab("list");
     setNewProj({name:"",tag:"",color:"#6366f1",year:"",period:"",budget:"",remark:""});
   };
   const deleteProject=id=>{
@@ -481,6 +582,8 @@ function MainApp(){
     const rest=projects.filter(p=>p.id!==id);
     setProjects(rest);if(view===id){setView("dashboard");setSelTaskId(null);}
   };
+  const navTo=v=>{setView(v);setSelTaskId(null);setFilter("all");setSort("default");setProjTab("list");};
+
   const getDday=due=>{
     if(!due)return null;
     const diff=Math.ceil((new Date(due)-new Date())/(864e5));
@@ -498,16 +601,29 @@ function MainApp(){
   };
   const filtered=proj?getSorted(proj.tasks.filter(t=>filter==="all"||t.status===filter)):[];
 
+  /* 사이드바 공통 항목 스타일 */
+  const navItem=(active,color)=>({padding:"12px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:active?"#2d2d3f":"transparent",borderLeft:active?`3px solid ${color||"#a78bfa"}`:"3px solid transparent"});
+
   return(
     <div style={{display:"flex",height:"100vh",fontSize:14,background:"#f1f5f9"}}>
-      {/* Sidebar */}
+
+      {/* ── 사이드바 ── */}
       <div style={{width:220,background:"#1e1e2e",display:"flex",flexDirection:"column",flexShrink:0}}>
-        <div onClick={()=>{setView("dashboard");setSelTaskId(null);}}
-          style={{padding:"16px",cursor:"pointer",borderBottom:"1px solid #2d2d3f",display:"flex",alignItems:"center",gap:8,background:view==="dashboard"?"#2d2d3f":"transparent"}}>
+        {/* 대시보드 */}
+        <div onClick={()=>navTo("dashboard")} style={navItem(view==="dashboard")}>
           <span>🏠</span>
           <span style={{color:view==="dashboard"?"#fff":"#9ca3af",fontWeight:700,fontSize:13}}>대시보드</span>
         </div>
-        <div style={{padding:"10px 16px 8px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        {/* 캘린더 */}
+        <div onClick={()=>navTo("calendar")} style={navItem(view==="calendar","#34d399")}>
+          <span>📅</span>
+          <span style={{color:view==="calendar"?"#fff":"#9ca3af",fontWeight:700,fontSize:13}}>캘린더</span>
+        </div>
+        {/* 구분선 */}
+        <div style={{height:1,background:"#2d2d3f",margin:"4px 0"}}/>
+
+        {/* 프로젝트 목록 */}
+        <div style={{padding:"8px 16px 6px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{color:"#a78bfa",fontWeight:700,fontSize:12,letterSpacing:1}}>📁 PROJECTS</div>
           <button onClick={()=>setShowAddProj(v=>!v)} style={{background:"#2d2d3f",border:"none",color:"#a78bfa",borderRadius:5,width:22,height:22,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
         </div>
@@ -526,15 +642,16 @@ function MainApp(){
             </div>
           </div>
         )}
-        <div style={{flex:1,overflowY:"auto",padding:"6px 0"}}>
+        <div style={{flex:1,overflowY:"auto",padding:"4px 0"}}>
           {projects.map(p=>{
             const pct=p.tasks.length?Math.round(p.tasks.filter(t=>t.status==="done").length/p.tasks.length*100):0;
+            const active=view===p.id;
             return(
-              <div key={p.id} onClick={()=>{setView(p.id);setFilter("all");setSort("default");setSelTaskId(null);}}
-                style={{padding:"9px 16px",cursor:"pointer",background:view===p.id?"#2d2d3f":"transparent",borderLeft:view===p.id?`3px solid ${p.color}`:"3px solid transparent"}}>
+              <div key={p.id} onClick={()=>navTo(p.id)}
+                style={{padding:"9px 16px",cursor:"pointer",background:active?"#2d2d3f":"transparent",borderLeft:active?`3px solid ${p.color}`:"3px solid transparent"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                  <div style={{color:view===p.id?"#fff":"#9ca3af",fontSize:11,fontWeight:600,marginBottom:3,flex:1,overflow:"hidden",textOverflow:"ellipsis",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{p.name}</div>
-                  {view===p.id&&<button onClick={e=>{e.stopPropagation();deleteProject(p.id);}} style={{background:"none",border:"none",color:"#6b7280",cursor:"pointer",fontSize:11,flexShrink:0,marginLeft:3}}>✕</button>}
+                  <div style={{color:active?"#fff":"#9ca3af",fontSize:11,fontWeight:600,marginBottom:3,flex:1,overflow:"hidden",textOverflow:"ellipsis",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{p.name}</div>
+                  {active&&<button onClick={e=>{e.stopPropagation();deleteProject(p.id);}} style={{background:"none",border:"none",color:"#6b7280",cursor:"pointer",fontSize:11,flexShrink:0,marginLeft:3}}>✕</button>}
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:5}}>
                   <div style={{flex:1,height:3,background:"#374151",borderRadius:2}}><div style={{width:`${pct}%`,height:"100%",background:p.color,borderRadius:2}}/></div>
@@ -546,77 +663,105 @@ function MainApp(){
         </div>
       </div>
 
-      {/* 뷰 */}
-      {view==="dashboard"?(
-        <Dashboard projects={projects} onSelectProject={id=>{setView(id);setFilter("all");setSort("default");setSelTaskId(null);}} onUpdateProject={updateProjInfo}/>
-      ):proj?(
+      {/* ── 콘텐츠 영역 ── */}
+      {view==="dashboard"&&(
+        <Dashboard projects={projects}
+          onSelectProject={id=>navTo(id)}
+          onUpdateProject={updateProjInfo}
+          onViewCalendar={()=>navTo("calendar")}/>
+      )}
+
+      {view==="calendar"&&(
+        <GlobalCalendar projects={projects}/>
+      )}
+
+      {proj&&(
         <>
           <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
+            {/* 프로젝트 헤더 */}
             <div style={{background:"#fff",padding:"10px 16px",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-              <button onClick={()=>{setView("dashboard");setSelTaskId(null);}} style={{background:"none",border:"none",color:"#94a3b8",cursor:"pointer",fontSize:12,padding:"2px 6px",borderRadius:6}}>← 대시보드</button>
+              <button onClick={()=>navTo("dashboard")} style={{background:"none",border:"none",color:"#94a3b8",cursor:"pointer",fontSize:12,padding:"2px 6px",borderRadius:6}}>← 대시보드</button>
               <div style={{width:1,height:14,background:"#e2e8f0"}}/>
               <div style={{width:8,height:8,borderRadius:"50%",background:proj.color,flexShrink:0}}/>
               <div style={{flex:1,minWidth:0,fontWeight:700,color:"#1e293b",fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{proj.name}</div>
-              <div style={{display:"flex",gap:4,flexShrink:0}}>
-                {["all","todo","doing","done"].map(s=>(
-                  <button key={s} onClick={()=>setFilter(s)} style={{padding:"3px 8px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,background:filter===s?proj.color:"#f1f5f9",color:filter===s?"#fff":"#64748b"}}>
-                    {s==="all"?"전체":STATUS[s]}
+              {/* 리스트 / 캘린더 탭 */}
+              <div style={{display:"flex",borderRadius:8,overflow:"hidden",border:"1px solid #e2e8f0",flexShrink:0}}>
+                {[["list","📋 리스트"],["calendar","📅 캘린더"]].map(([tab,label])=>(
+                  <button key={tab} onClick={()=>{setProjTab(tab);setSelTaskId(null);}}
+                    style={{padding:"5px 12px",border:"none",cursor:"pointer",fontSize:11,fontWeight:600,
+                      background:projTab===tab?proj.color:"#fff",color:projTab===tab?"#fff":"#64748b"}}>
+                    {label}
                   </button>
                 ))}
               </div>
             </div>
-            <div style={{display:"flex",gap:7,padding:"10px 14px 0",flexWrap:"wrap",alignItems:"center"}}>
-              {[["전체",proj.tasks.length,"#6366f1"],["할 일",proj.tasks.filter(t=>t.status==="todo").length,"#6b7280"],["진행 중",proj.tasks.filter(t=>t.status==="doing").length,"#3b82f6"],["완료",proj.tasks.filter(t=>t.status==="done").length,"#10b981"]].map(([l,v,c])=>(
-                <div key={l} style={{background:"#fff",borderRadius:9,padding:"5px 12px",display:"flex",alignItems:"center",gap:5,boxShadow:"0 1px 3px rgba(0,0,0,.06)"}}>
-                  <span style={{fontSize:16,fontWeight:800,color:c}}>{v}</span>
-                  <span style={{color:"#94a3b8",fontSize:10}}>{l}</span>
-                </div>
-              ))}
-              <div style={{display:"flex",alignItems:"center",gap:4,marginLeft:"auto"}}>
-                <span style={{fontSize:11,color:"#94a3b8"}}>정렬</span>
-                {[["default","기본"],["due","마감임박"],["priority","우선순위"]].map(([val,label])=>(
-                  <button key={val} onClick={()=>setSort(val)} style={{padding:"3px 8px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,background:sort===val?proj.color:"#f1f5f9",color:sort===val?"#fff":"#64748b"}}>{label}</button>
-                ))}
-              </div>
-              <button onClick={()=>{setShowAdd(true);setSelTaskId(null);}} style={{padding:"5px 11px",background:proj.color,color:"#fff",border:"none",borderRadius:7,cursor:"pointer",fontWeight:600,fontSize:12}}>+ 추가</button>
-            </div>
-            <div style={{flex:1,overflowY:"auto",padding:13}}>
-              {showAdd&&<NewTaskForm projColor={proj.color} members={members} onSave={t=>{const tk=mkTask({...t,id:nid()});updateProjTasks([...proj.tasks,tk]);setShowAdd(false);setSelTaskId(tk.id);}} onCancel={()=>setShowAdd(false)}/>}
-              {filtered.length===0&&<div style={{textAlign:"center",color:"#94a3b8",padding:50}}><div style={{fontSize:26,marginBottom:8}}>📭</div>태스크가 없습니다.</div>}
-              {filtered.map((t,i)=>{
-                const ds=t.subtasks.filter(s=>s.done).length;
-                const isSel=selTaskId===t.id;
-                const dday=getDday(t.due);
-                return(
-                  <div key={t.id} onClick={()=>setSelTaskId(isSel?null:t.id)}
-                    style={{background:"#fff",borderRadius:9,padding:"10px 13px",marginBottom:6,
-                      boxShadow:isSel?`0 0 0 2px ${proj.color}`:"0 1px 3px rgba(0,0,0,.06)",
-                      display:"flex",alignItems:"flex-start",gap:9,borderLeft:`4px solid ${SC[t.status]}`,cursor:"pointer"}}>
-                    {sort!=="default"&&<div style={{color:"#94a3b8",fontSize:11,fontWeight:700,minWidth:18,paddingTop:1}}>{i+1}</div>}
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:600,color:"#1e293b",marginBottom:3,fontSize:13,textDecoration:t.status==="done"?"line-through":"none",opacity:t.status==="done"?.5:1}}>{t.title}</div>
-                      <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
-                        <span style={{fontSize:10,padding:"1px 6px",borderRadius:20,background:PC[t.priority]+"20",color:PC[t.priority],fontWeight:700}}>{PRIORITY[t.priority]}</span>
-                        <span style={{fontSize:10,padding:"1px 6px",borderRadius:20,background:SC[t.status]+"15",color:SC[t.status],fontWeight:600}}>{STATUS[t.status]}</span>
-                        {t.assignee&&<span style={{fontSize:10,color:"#64748b"}}>👤 {t.assignee}</span>}
-                        {dday&&<span style={{fontSize:10,fontWeight:700,color:dday.color}}>📅 {t.due} {dday.label}</span>}
-                        {t.subtasks.length>0&&<span style={{fontSize:10,color:"#94a3b8"}}>하위 {ds}/{t.subtasks.length}</span>}
-                      </div>
-                      {t.subtasks.length>0&&<div style={{marginTop:5,height:3,background:"#f1f5f9",borderRadius:2}}><div style={{width:`${t.subtasks.length?ds/t.subtasks.length*100:0}%`,height:"100%",background:proj.color,borderRadius:2}}/></div>}
+
+            {/* 리스트 뷰 */}
+            {projTab==="list"&&(
+              <>
+                <div style={{display:"flex",gap:7,padding:"10px 14px 0",flexWrap:"wrap",alignItems:"center"}}>
+                  {[["전체",proj.tasks.length,"#6366f1"],["할 일",proj.tasks.filter(t=>t.status==="todo").length,"#6b7280"],["진행 중",proj.tasks.filter(t=>t.status==="doing").length,"#3b82f6"],["완료",proj.tasks.filter(t=>t.status==="done").length,"#10b981"]].map(([l,v,c])=>(
+                    <div key={l} style={{background:"#fff",borderRadius:9,padding:"5px 12px",display:"flex",alignItems:"center",gap:5,boxShadow:"0 1px 3px rgba(0,0,0,.06)"}}>
+                      <span style={{fontSize:16,fontWeight:800,color:c}}>{v}</span>
+                      <span style={{color:"#94a3b8",fontSize:10}}>{l}</span>
                     </div>
-                    <button onClick={e=>{e.stopPropagation();deleteTask(t.id);}} style={{background:"none",border:"none",cursor:"pointer",color:"#e2e8f0",fontSize:14,flexShrink:0}}>✕</button>
+                  ))}
+                  <div style={{display:"flex",gap:4,marginLeft:"auto",flexWrap:"wrap"}}>
+                    {["all","todo","doing","done"].map(s=>(
+                      <button key={s} onClick={()=>setFilter(s)} style={{padding:"3px 8px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,background:filter===s?proj.color:"#f1f5f9",color:filter===s?"#fff":"#64748b"}}>
+                        {s==="all"?"전체":STATUS[s]}
+                      </button>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    {[["default","기본"],["due","마감임박"],["priority","우선순위"]].map(([val,label])=>(
+                      <button key={val} onClick={()=>setSort(val)} style={{padding:"3px 7px",borderRadius:20,border:"none",cursor:"pointer",fontSize:10,fontWeight:600,background:sort===val?proj.color:"#f1f5f9",color:sort===val?"#fff":"#64748b"}}>{label}</button>
+                    ))}
+                  </div>
+                  <button onClick={()=>{setShowAdd(true);setSelTaskId(null);}} style={{padding:"5px 11px",background:proj.color,color:"#fff",border:"none",borderRadius:7,cursor:"pointer",fontWeight:600,fontSize:12}}>+ 추가</button>
+                </div>
+                <div style={{flex:1,overflowY:"auto",padding:13}}>
+                  {showAdd&&<NewTaskForm projColor={proj.color} members={members} onSave={t=>{const tk=mkTask({...t,id:nid()});updateProjTasks([...proj.tasks,tk]);setShowAdd(false);setSelTaskId(tk.id);}} onCancel={()=>setShowAdd(false)}/>}
+                  {filtered.length===0&&<div style={{textAlign:"center",color:"#94a3b8",padding:50}}><div style={{fontSize:26,marginBottom:8}}>📭</div>태스크가 없습니다.</div>}
+                  {filtered.map((t,i)=>{
+                    const ds=t.subtasks.filter(s=>s.done).length;
+                    const isSel=selTaskId===t.id;
+                    const dday=getDday(t.due);
+                    return(
+                      <div key={t.id} onClick={()=>setSelTaskId(isSel?null:t.id)}
+                        style={{background:"#fff",borderRadius:9,padding:"10px 13px",marginBottom:6,boxShadow:isSel?`0 0 0 2px ${proj.color}`:"0 1px 3px rgba(0,0,0,.06)",display:"flex",alignItems:"flex-start",gap:9,borderLeft:`4px solid ${SC[t.status]}`,cursor:"pointer"}}>
+                        {sort!=="default"&&<div style={{color:"#94a3b8",fontSize:11,fontWeight:700,minWidth:18,paddingTop:1}}>{i+1}</div>}
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:600,color:"#1e293b",marginBottom:3,fontSize:13,textDecoration:t.status==="done"?"line-through":"none",opacity:t.status==="done"?.5:1}}>{t.title}</div>
+                          <div style={{display:"flex",gap:5,flexWrap:"wrap",alignItems:"center"}}>
+                            <span style={{fontSize:10,padding:"1px 6px",borderRadius:20,background:PC[t.priority]+"20",color:PC[t.priority],fontWeight:700}}>{PRIORITY[t.priority]}</span>
+                            <span style={{fontSize:10,padding:"1px 6px",borderRadius:20,background:SC[t.status]+"15",color:SC[t.status],fontWeight:600}}>{STATUS[t.status]}</span>
+                            {t.assignee&&<span style={{fontSize:10,color:"#64748b"}}>👤 {t.assignee}</span>}
+                            {dday&&<span style={{fontSize:10,fontWeight:700,color:dday.color}}>📅 {t.due} {dday.label}</span>}
+                            {t.subtasks.length>0&&<span style={{fontSize:10,color:"#94a3b8"}}>하위 {ds}/{t.subtasks.length}</span>}
+                          </div>
+                          {t.subtasks.length>0&&<div style={{marginTop:5,height:3,background:"#f1f5f9",borderRadius:2}}><div style={{width:`${t.subtasks.length?ds/t.subtasks.length*100:0}%`,height:"100%",background:proj.color,borderRadius:2}}/></div>}
+                        </div>
+                        <button onClick={e=>{e.stopPropagation();deleteTask(t.id);}} style={{background:"none",border:"none",cursor:"pointer",color:"#e2e8f0",fontSize:14,flexShrink:0}}>✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* 캘린더 뷰 */}
+            {projTab==="calendar"&&<ProjectCalendarView proj={proj}/>}
           </div>
-          {selTaskId&&(
+
+          {/* 상세 패널 (리스트 탭에서만) */}
+          {projTab==="list"&&selTaskId&&(
             <DetailPanel key={selTaskId} taskId={selTaskId} projTasks={proj.tasks}
               projColor={proj.color} onClose={()=>setSelTaskId(null)} onChange={updateTask}
               members={members} onAddMember={addMember} onDeleteMember={deleteMember}/>
           )}
         </>
-      ):null}
+      )}
     </div>
   );
 }
